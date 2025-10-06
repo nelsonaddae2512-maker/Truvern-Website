@@ -1,0 +1,28 @@
+
+node_modules
+.next
+.env*
+dist
+coverage
+*.log
+.idea
+.vscode
+.DS_Store
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+*.log
+.env*
+*.local
+# OS junk
+.DS_Store
+Thumbs.db
+# Archives
+*.zip
+*.7z
+*.tar
+*.gz

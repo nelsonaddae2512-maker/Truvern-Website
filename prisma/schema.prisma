@@ -1,0 +1,135 @@
+
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model Organization {
+  id                     String   @id @default(cuid())
+  name                   String
+  plan                   String   @default("free")
+  seats                  Int      @default(3)
+  stripeCustomerId       String?  @unique
+  stripeSubscriptionId   String?  @unique
+  stripeSubscriptionItemId String?
+  subscriptionStatus     String?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  vendors                Vendor[]
+  memberships            Membership[]
+}
+
+model Vendor {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  trustPublic    Boolean  @default(false)
+  trustToken     String?
+  trustScore     Int?
+  trustLevel     String?
+  trustUpdatedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  answers        Answer[]
+  evidence       Evidence[]
+}
+
+model Answer {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  questionId  String
+  answer      String   // yes|no|partial|na
+  maturity    Int?
+  criticality String   // Low|Medium|High
+  frameworks  String[]
+  updatedAt   DateTime @updatedAt
+}
+
+model Evidence {
+  id           String   @id @default(cuid())
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id])
+  questionId   String
+  url          String
+  reviewerNote String?
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+}
+
+model UsageEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  count          Int      @default(1)
+  vendorId       String?
+  assessmentId   String?
+  createdAt      DateTime @default(now())
+  @@index([organizationId, createdAt])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String?  @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Membership[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String   // OWNER | ADMIN | MEMBER
+  createdAt      DateTime @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([organizationId])
+}
+
+model PendingInvite {
+  id             String   @id @default(cuid())
+  email          String
+  organizationId String
+  role           String   // OWNER | ADMIN | MEMBER
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  @@index([email])
+}

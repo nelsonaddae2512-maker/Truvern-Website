@@ -1,0 +1,1 @@
+export default function Page(){ return <div className='p-8 max-w-5xl mx-auto'>For Vendors</div>; }

@@ -8,9 +8,16 @@ export async function GET(){
   const session = await getServerSession(authOptions);
   const me = session?.user as any;
   if(!me?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // Find all orgs the reviewer belongs to
-  const memberships = await prisma.membership.findMany({ where: { user: { email: me.email } }, select: { organizationId: true } });
-  const orgIds = memberships.map(m => m.organizationId);
+    // Find all orgs the reviewer belongs to
+  import { Membership } from "@prisma/client";
+
+  const memberships: Pick<Membership, "organizationId">[] =
+    await prisma.membership.findMany({
+      where: { user: { email: me.email } },
+      select: { organizationId: true },
+    });
+
+  const orgIds = memberships.map(({ organizationId }) => organizationId);
   if(orgIds.length === 0) return NextResponse.json({ items: [] });
   // Evidence rows for vendors in those orgs, newest first
   const items = await prisma.evidence.findMany({

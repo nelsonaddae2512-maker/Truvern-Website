@@ -11,7 +11,7 @@ export async function GET(){
   if(!me?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // Find all orgs the reviewer belongs to
 
-  const memberships: Pick<Membership, "organizationId">[] =
+  const memberships: OrgIdRow[] =
     await prisma.membership.findMany({
       where: { user: { email: me.email } },
       select: { organizationId: true },

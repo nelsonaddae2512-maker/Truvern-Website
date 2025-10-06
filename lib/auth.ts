@@ -56,7 +56,7 @@ const secret = process.env.SAML_SESSION_SECRET || process.env.INVITE_SECRET || "
   pages: { signIn: "/login" },
   callbacks: {
     async signIn({ user, email }){
-      const address = (email?.email || user?.email || '').toLowerCase();
+      const address = String((user as any)?.email ?? '').toLowerCase();
       if(!address) return false;
       if(domainAllowed(address)) return true;
       const invite = await prisma.pendingInvite.findFirst({ where: { email: address, expiresAt: { gt: new Date() } } });

@@ -6,6 +6,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { sendMagicLinkEmail } from "@/lib/email";
 import crypto from "crypto";
+import crypto from "crypto";
 
 function domainAllowed(email: string){
   const allow = (process.env.ALLOWED_EMAIL_DOMAINS || '').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
@@ -27,8 +28,9 @@ export const authOptions: NextAuthOptions = {
         if (!token) return null;
         try{
           const [body, sig] = token.split('.');
+const secret = process.env.SAML_SESSION_SECRET || process.env.INVITE_SECRET || "dev_secret";
 
-          const expected = Buffer.from(hmac.new = require('crypto').createHmac('sha256', secret).update(body).digest('base64url'));
+          const expected = crypto.createHmac("sha256", secret).update(body).digest("base64url");
         }catch{}
 
         const parts = token.split('.');

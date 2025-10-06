@@ -3,14 +3,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Membership } from "@prisma/client";
 
 export async function GET(){
   const session = await getServerSession(authOptions);
   const me = session?.user as any;
   if(!me?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // Find all orgs the reviewer belongs to
-  import { Membership } from "@prisma/client";
-
 
   const memberships: Pick<Membership, "organizationId">[] =
     await prisma.membership.findMany({

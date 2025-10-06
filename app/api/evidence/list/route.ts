@@ -11,6 +11,7 @@ export async function GET(){
     // Find all orgs the reviewer belongs to
   import { Membership } from "@prisma/client";
 
+
   const memberships: Pick<Membership, "organizationId">[] =
     await prisma.membership.findMany({
       where: { user: { email: me.email } },

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import * as saml from "samlify";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+type Org = { id: string | number; name: string; plan?: string; seats?: number };
 
 saml.setSchemaValidator({ validate: () => Promise.resolve('skipped-for-demo') });
 
@@ -29,7 +30,7 @@ async function ensureOrgForEmail(email: string){
   const name = `${domain} Org (SSO)`;
   let org = await prisma.organization.findFirst({ where: { name } });
   if(!org){ org = await prisma.organization.create({ data: { name, plan: 'pro', seats: 9999 } }); }
-  return org as Organization;
+  return org as Org;
 }
 function signPayload(obj: any){
 

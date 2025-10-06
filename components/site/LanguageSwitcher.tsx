@@ -1,7 +1,7 @@
 
 'use client';
 import React from 'react';
-import { useI18n } from '@/lib/i18n';
+import { useI18n } from "../../lib/i18n";
 
 export function LanguageSwitcher(){
   const { locale, setLocale } = useI18n();

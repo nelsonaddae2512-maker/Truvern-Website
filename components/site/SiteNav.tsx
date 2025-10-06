@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { AuthButtons } from '@/components/site/AuthButtons';
-import { useI18n } from '@/lib/i18n';
+import { useI18n } from "../../lib/i18n";
 import { LanguageSwitcher } from '@/components/site/LanguageSwitcher';
 import { Logo } from '@/components/site/Logo';
 

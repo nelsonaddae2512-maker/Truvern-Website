@@ -1,7 +1,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useI18n } from '@/lib/i18n';
+import { useI18n } from "../../lib/i18n";
 import { LanguageSwitcher } from '@/components/site/LanguageSwitcher';
 
 export function SiteFooter(){

@@ -2,7 +2,7 @@
 import React from "react";
 import SessionWrap from "@/components/providers/Session";
 import "./globals.css";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider } from "../lib/i18n";
 export const metadata = {
   metadataBase: new URL("https://truvern.com"),
   title: "Truvern — Vendor Trust Network",

@@ -9,7 +9,10 @@ saml.setSchemaValidator({ validate: () => Promise.resolve('skipped-for-demo') })
 function getSp(){
   return saml.ServiceProvider({
     entityID: process.env.SAML_SP_ENTITY_ID || "http://localhost:3000/sso/saml",
-    assertEndpoint: process.env.SAML_ACS_URL || "http://localhost:3000/api/sso/saml/acs"
+    assertionConsumerService: [{
+  Binding: saml.Constants.namespace.binding.post,
+  Location: process.env.SAML_ACS_URL || "http://localhost:3000/api/sso/saml/acs"
+}]
   });
 }
 function getIdp(){

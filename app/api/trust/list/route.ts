@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+type AnswerLite = { frameworks?: string[] };
 
 export async function GET(req: Request){
   const { searchParams } = new URL(req.url);
@@ -16,7 +17,7 @@ export async function GET(req: Request){
   const result = [];
   for(const v of vendors){
     const answers = await prisma.answer.findMany({ where: { vendorId: v.id }, select: { frameworks: true } });
-    const set = new Set<string>(); answers.forEach(a => (a.frameworks || []).forEach(f => set.add(f)));
+    const set = new Set<string>(); (answers as AnswerLite[]).forEach((a) => (a.frameworks ?? []).forEach((f: string) => set.add(f)));
     const frameworks = Array.from(set).sort().slice(0, 8);
 
     if (q && !v.name.toLowerCase().includes(q) && !v.slug.toLowerCase().includes(q)) continue;

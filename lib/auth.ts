@@ -29,14 +29,14 @@ export const authOptions: NextAuthOptions = {
           const [body, sig] = token.split('.');
 const secret = process.env.SAML_SESSION_SECRET || process.env.INVITE_SECRET || "dev_secret";
 
-          const expected = crypto.createHmac("sha256", secret).update(body).digest("base64url");
+          const expected = crypto.createHmac('sha256', (process.env.SAML_SESSION_SECRET || process.env.INVITE_SECRET || 'dev_secret')).update(body).digest("base64url");
         }catch{}
 
         const parts = token.split('.');
         if(parts.length !== 2) return null;
         const body = Buffer.from(parts[0], 'base64url').toString('utf8');
         const given = Buffer.from(parts[1], 'base64url');
-        const expected = crypto.createHmac('sha256', secret).update(parts[0]).digest();
+        const expected = crypto.createHmac('sha256', (process.env.SAML_SESSION_SECRET || process.env.INVITE_SECRET || 'dev_secret')).update(parts[0]).digest();
         if(!crypto.timingSafeEqual(expected, given)) return null;
         const data = JSON.parse(body);
         const email = String(data.email||'').toLowerCase();

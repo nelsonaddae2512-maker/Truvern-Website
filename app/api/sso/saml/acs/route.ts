@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import * as saml from "samlify";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { Organization } from "@prisma/client";
 
 saml.setSchemaValidator({ validate: () => Promise.resolve('skipped-for-demo') });
 

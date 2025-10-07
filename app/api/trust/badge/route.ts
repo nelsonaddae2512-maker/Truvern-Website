@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import type { NextRequest } from "next/server";
+type AnswerLite = { evidenceStatus?: "approved"|"pending"|"rejected"|string|null };
 
 /** Render a simple SVG badge */
 function svgBadge(label: string, value: string, color = "#10b981"){
@@ -50,12 +51,12 @@ export async function GET(req: NextRequest){
         if (typeof vendor.trustLevel === "string") level = vendor.trustLevel;
 
         if(!vendor.trustLevel || vendor.trustScore == null){
-          const answers = await prisma.answer.findMany({
+          const answers: AnswerLite[] = await prisma.answer.findMany({
             where: { vendorId: vendor.id },
             select: { evidenceStatus: true }
           });
           const total = answers.length;
-          const approved = answers.filter(a => a.evidenceStatus === "approved").length;
+          const approved = answers.filter((a: AnswerLite) => a.evidenceStatus === "approved").length;
           score = total > 0 ? Math.round((approved/total) * 100) : 0;
           level = score >= 80 ? "High" : score >= 50 ? "Medium" : "Low";
         }

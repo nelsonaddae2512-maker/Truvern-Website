@@ -54,12 +54,12 @@ export async function POST(req: Request) {
     });
 
     // Optional: if you have a mailer wired, trigger it here (soft-fail)
-    try {
-      const { sendInviteEmail } = await import("@/lib/email").catch(() => ({ sendInviteEmail: null as any }));
-      if (typeof sendInviteEmail === "function") {
-        await sendInviteEmail({ email, token });
-      }
-    } catch {}
+try {
+  const mod = (await import("@/lib/email").catch(() => ({}))) as { sendInviteEmail?: (x:any)=>Promise<any> };
+  if (typeof mod.sendInviteEmail === "function") {
+    await mod.sendInviteEmail({ email, token });
+  }
+} catch {}
 
     return NextResponse.json({ ok: true, inviteId: invite.id }, { status: 200 });
   } catch {

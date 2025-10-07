@@ -1,11 +1,8 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 
-export async function GET(){
+export async function GET(){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth");  const { prisma } = await import("@/lib/prisma"); 
   const session = await getServerSession(authOptions);
   const me = session?.user as any;
   if(!me?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,10 +1,7 @@
 export const runtime = "nodejs";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-export const runtime = "edge";
 
 export async function GET(req: NextRequest){
   const { searchParams } = new URL(req.url);

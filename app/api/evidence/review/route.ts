@@ -17,7 +17,7 @@ export async function GET() {
       where: { user: { email } },
       select: { organizationId: true },
     });
-    const orgIds = memberships.map(({ organizationId }) => organizationId);
+    const orgIds = memberships.map((m: { organizationId: string | number }) => m.organizationId);
     if (orgIds.length === 0) return NextResponse.json({ items: [] }, { status: 200 });
 
     // Evidence awaiting review for vendors in those orgs

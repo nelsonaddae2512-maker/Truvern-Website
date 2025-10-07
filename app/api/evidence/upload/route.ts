@@ -1,13 +1,12 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
  * GET: benign response so Next's build-time "collect page data" never fails.
  */
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const q = new URL(req.url).searchParams;
     const vendorId = q.get("vendorId");
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
  * POST: accept JSON { vendorId, filename, contentType, size } and create a DB stub.
  * Prisma is lazy-imported so we don't touch @prisma/client at build time.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const body = await req.json().catch(() => ({} as any));
     const vendorId = body?.vendorId ?? null;

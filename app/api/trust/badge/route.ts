@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import type { NextRequest } from "next/server";
 
 type AnswerLite = { evidenceStatus?: "approved"|"pending"|"rejected"|string|null };
@@ -17,7 +16,7 @@ function svgBadge(label: string, value: string, color = "#10b981") {
 </svg>`;
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const slug = (new URL(req.url).searchParams.get("slug") || "").trim().toLowerCase();
     if (!slug) {

@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -8,7 +7,7 @@ import type { NextRequest } from "next/server";
  * GET: return a benign payload or echo a requested evidenceId if provided.
  * This keeps build-time "collect page data" happy and avoids throwing.
  */
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const url = new URL(req.url);
     const evidenceId = url.searchParams.get("evidenceId");
@@ -23,7 +22,7 @@ export async function GET(req: NextRequest) {
  * Adjust to your storage needs later. Prisma is imported lazily.
  * Body: { filename?: string, contentType?: string, evidenceId?: string }
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const body = await req.json().catch(() => ({} as any));
     const filename = typeof body.filename === "string" ? body.filename : null;

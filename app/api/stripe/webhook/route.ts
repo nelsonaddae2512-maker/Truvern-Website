@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -13,7 +12,7 @@ export async function GET() {
  * Stripe Webhook: expects raw body + signature header.
  * Env: STRIPE_SECRET_KEY (optional for typed events), STRIPE_WEBHOOK_SECRET (recommended)
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest){ const { default: Stripe } = await import("stripe"); 
   try {
     const sig = req.headers.get("stripe-signature") || "";
     const whSecret = process.env.STRIPE_WEBHOOK_SECRET || "";

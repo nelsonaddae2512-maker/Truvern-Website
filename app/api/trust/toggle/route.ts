@@ -1,11 +1,10 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 /** Build-safe GET so Next's collect-page-data never fails */
-export async function GET() {
+export async function GET(){ const { prisma } = await import("@/lib/prisma"); 
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
@@ -14,7 +13,7 @@ export async function GET() {
  * If "state" provided, sets publicTrust = state; otherwise toggles current value.
  * Always returns 200 with { ok, slug, publicTrust? } and never throws.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const body = await req.json().catch(() => ({} as any));
     const slug = String(body?.slug || "").trim().toLowerCase();

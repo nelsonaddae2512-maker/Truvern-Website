@@ -1,12 +1,11 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 type AnswerLite = { frameworks?: string[]; evidenceStatus?: "approved"|"pending"|"rejected"|string|null };
 
-export async function GET(req: NextRequest, ctx: { params: { slug?: string } }) {
+export async function GET(req: NextRequest, ctx: { params: { slug?: string } }){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const slug = String(ctx?.params?.slug || "").trim().toLowerCase();
     if (!slug) return NextResponse.json({ ok:false, error:"missing_slug" }, { status:200 });

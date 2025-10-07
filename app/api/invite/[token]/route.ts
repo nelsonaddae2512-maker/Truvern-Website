@@ -1,10 +1,9 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { token: string } }){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const token = String(params?.token || "").trim();
     if (!token) return NextResponse.json({ ok:false, error:"missing_token" }, { status:200 });

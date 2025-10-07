@@ -1,9 +1,8 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth");  const { prisma } = await import("@/lib/prisma"); 
   try {
     // Lazy import next-auth & authOptions
     const { getServerSession } = await import("next-auth");

@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import * as saml from "samlify";
-import { prisma } from "@/lib/prisma";
+
 import crypto from "crypto";
 type Org = { id: string | number; name: string; plan?: string; seats?: number };
 
@@ -41,7 +41,7 @@ function signPayload(obj: any){
   return `${body}.${sig}`;
 }
 
-export async function POST(req: Request){
+export async function POST(req: Request){ const { prisma } = await import("@/lib/prisma"); 
   const form = await req.formData();
   const SAMLResponse = String(form.get('SAMLResponse') || '');
   if(!SAMLResponse) return NextResponse.json({ error: 'Missing SAMLResponse' }, { status: 400 });
@@ -68,3 +68,5 @@ export async function POST(req: Request){
     return NextResponse.json({ error: 'SAML parse failed', detail: e?.message }, { status: 400 });
   }
 }
+
+export async function GET(){ return new Response('{"ok":true}',{ status:200, headers:{ "Content-Type":"application/json" }}); }

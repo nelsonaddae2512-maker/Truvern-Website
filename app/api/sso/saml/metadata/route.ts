@@ -1,4 +1,5 @@
-
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export async function GET(){
   const xml = `<?xml version="1.0"?>
 <EntityDescriptor entityID="https://truvern.com/sso/saml" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">

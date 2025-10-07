@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import type { NextRequest } from "next/server";
 
 async function getHandler() {
@@ -10,13 +9,13 @@ async function getHandler() {
   return NextAuth(authOptions);
 }
 
-export async function GET(req: NextRequest, ctx: any) {
+export async function GET(req: NextRequest, ctx: any){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth"); 
   const handler = await getHandler();
   // @ts-ignore – handler signature is compatible
   return handler(req as any, ctx as any);
 }
 
-export async function POST(req: NextRequest, ctx: any) {
+export async function POST(req: NextRequest, ctx: any){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth"); 
   const handler = await getHandler();
   // @ts-ignore – handler signature is compatible
   return handler(req as any, ctx as any);

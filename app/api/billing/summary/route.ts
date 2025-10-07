@@ -1,6 +1,6 @@
-
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
 
 export async function GET(){
   const key = process.env.STRIPE_SECRET_KEY;

@@ -1,16 +1,15 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 
 // Build-friendly GET for Next's analyzer
-export async function GET() {
+export async function GET(){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth");  const { prisma } = await import("@/lib/prisma"); 
   try { return NextResponse.json({ ok: true }, { status: 200 }); }
   catch { return NextResponse.json({ ok: false }, { status: 200 }); }
 }
 
 // POST { email, organizationId?, role? }
-export async function POST(req: Request) {
+export async function POST(req: Request){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth");  const { prisma } = await import("@/lib/prisma"); 
   try {
     // Lazily import next-auth + authOptions INSIDE the handler
     const { getServerSession } = await import("next-auth");

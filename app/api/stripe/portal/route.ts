@@ -1,6 +1,5 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -15,7 +14,7 @@ export async function GET() {
  * OR
  * { "customerEmail": "buyer@example.com", "returnUrl": "https://example.com/account" }
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest){ const { default: Stripe } = await import("stripe"); 
   try {
     const body = await req.json().catch(() => ({} as any));
     const secret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET || "";

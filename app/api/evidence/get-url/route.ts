@@ -1,11 +1,12 @@
-
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req: Request){
+export async function GET(export async function GET(req: Request){ const { prisma } = await import("@/lib/prisma"); ){
   const session = await getServerSession(authOptions);
   if(!session?.user) return NextResponse.json({ error:'Unauthorized' }, { status: 401 });
   const { searchParams } = new URL(req.url);

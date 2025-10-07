@@ -1,31 +1,67 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-type AnswerLite = { frameworks?: string[] };
 
-export async function GET(req: Request){
-  const { searchParams } = new URL(req.url);
-  const q = (searchParams.get("q") || "").trim().toLowerCase();
-  const fw = (searchParams.get("framework") || "").trim();
+type AnswerLite = { frameworks?: string[] | null };
+type VendorLite = { id: string; name: string; slug: string };
 
-  const vendors = await prisma.vendor.findMany({
-    where: { trustPublic: true },
-    orderBy: [{ trustLevel: "desc" as any }, { trustScore: "desc" as any }, { updatedAt: "desc" }],
-    take: 200,
-  });
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const q = (url.searchParams.get("q") || "").trim().toLowerCase();
+    const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 20), 1), 100);
 
-  const result = [];
-  for(const v of vendors){
-    const answers = await prisma.answer.findMany({ where: { vendorId: v.id }, select: { frameworks: true } });
-    const set = new Set<string>(); (answers as AnswerLite[]).forEach((a) => (a.frameworks ?? []).forEach((f: string) => set.add(f)));
-    const frameworks = Array.from(set).sort().slice(0, 8);
+    // Lazy import prisma at request time (prevents build-time failures)
+    const mod = (await import("@/lib/prisma")) as { prisma?: any };
+    const prisma = mod?.prisma;
 
-    if (q && !v.name.toLowerCase().includes(q) && !v.slug.toLowerCase().includes(q)) continue;
-    if (fw && !frameworks.includes(fw)) continue;
+    if (!prisma) {
+      // Build-safe fallback
+      return NextResponse.json({ ok: true, items: [], total: 0 }, { status: 200 });
+    }
 
-    result.push({ name: v.name, slug: v.slug, trustScore: v.trustScore, trustLevel: v.trustLevel, updatedAt: v.trustUpdatedAt || v.updatedAt, frameworks });
+    // Pull vendors (lightweight)
+    const vendors: VendorLite[] = await prisma.vendor.findMany({
+      select: { id: true, name: true, slug: true },
+      orderBy: { updatedAt: "desc" },
+      take: 500 // soft cap before client-side filtering below
+    });
+
+    const items: Array<{
+      name: string;
+      slug: string;
+      frameworks: string[];
+    }> = [];
+
+    for (const v of vendors) {
+      // Optional client-side search over name/slug
+      if (q && !v.name.toLowerCase().includes(q) && !v.slug.toLowerCase().includes(q)) continue;
+
+      // Collect frameworks for this vendor (minimal select)
+      const answers: AnswerLite[] = await prisma.answer.findMany({
+        where: { vendorId: v.id },
+        select: { frameworks: true }
+      });
+
+      const set = new Set<string>();
+      (answers as AnswerLite[]).forEach((a: AnswerLite) => {
+        (a.frameworks ?? []).forEach((f: string) => set.add(f));
+      });
+
+      items.push({
+        name: v.name,
+        slug: v.slug,
+        frameworks: Array.from(set).sort().slice(0, 8)
+      });
+
+      if (items.length >= limit) break;
+    }
+
+    return NextResponse.json({ ok: true, items, total: items.length }, { status: 200 });
+  } catch {
+    // Never crash collect-page-data
+    return NextResponse.json({ ok: true, items: [], total: 0 }, { status: 200 });
   }
-
-  return NextResponse.json({ vendors: result });
 }

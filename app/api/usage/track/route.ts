@@ -1,5 +1,5 @@
 export const runtime = "nodejs";
-
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";

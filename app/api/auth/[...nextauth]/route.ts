@@ -1,8 +1,23 @@
-export const runtime = "nodejs";          // NextAuth requires Node runtime
-export const dynamic = "force-dynamic";   // never statically analyze this route
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth";
+import type { NextRequest } from "next/server";
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+async function getHandler() {
+  const { default: NextAuth } = await import("next-auth");
+  // Lazy import authOptions to avoid work during build-time analysis
+  const { authOptions } = await import("@/lib/auth");
+  return NextAuth(authOptions);
+}
+
+export async function GET(req: NextRequest, ctx: any) {
+  const handler = await getHandler();
+  // @ts-ignore – handler signature is compatible
+  return handler(req as any, ctx as any);
+}
+
+export async function POST(req: NextRequest, ctx: any) {
+  const handler = await getHandler();
+  // @ts-ignore – handler signature is compatible
+  return handler(req as any, ctx as any);
+}

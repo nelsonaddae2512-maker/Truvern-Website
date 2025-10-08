@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 export const dynamic = 'force-dynamic';
 import React, { Suspense } from 'react';
 import { signIn } from 'next-auth/react';
@@ -26,9 +26,9 @@ export default function LoginPage(){
           {error && <div className="text-sm text-rose-600">Login failed</div>}
         </form>
       ) : (
-        <div className="text-slate-700">Check your inbox for a secure sign‑in link.</div>
+        <div className="text-slate-700">Check your inbox for a secure signâ€‘in link.</div>
       )}
-      <div className="text-xs text-slate-500 mt-3">We’ll email a one‑time link. No passwords to remember.</div>
+      <div className="text-xs text-slate-500 mt-3">Weâ€™ll email a oneâ€‘time link. No passwords to remember.</div>
     </div>
   ))</Suspense>);
 }

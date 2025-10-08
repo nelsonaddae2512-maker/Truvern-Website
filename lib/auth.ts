@@ -69,11 +69,11 @@ const secret = process.env.SAML_SESSION_SECRET || process.env.INVITE_SECRET || "
         if(invite){
           const u = await prisma.user.findUnique({ where: { email: address } });
           if(u){
-            const has = await prisma.membership.findFirst({ where: { userId: u.id, organizationId: invite.organizationId } });
+            const has = await prisma.membership.findFirst({ where: { userId: u.id, organizationId: orgId } });
             if(!has){
-              await prisma.membership.create({ data: { userId: u.id, organizationId: invite.organizationId, role: invite.role } });
+              await prisma.membership.create({ data: { userId: u.id, organizationId: orgId, role: role } });
             }
-            await prisma.pendingInvite.deleteMany({ where: { email: address, organizationId: invite.organizationId } });
+            await prisma.pendingInvite.deleteMany({ where: { email: address, organizationId: orgId } });
             (token as any).organizationId = invite.organizationId;
             (token as any).role = invite.role;
           }

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import Link from 'next/link';
-import { useI18n } from "../../lib/i18n";
+import { useI18n } from "@/lib/i18n/client";
 export function CTA(){
   const { t, locale, setLocale } = useI18n();
   return (

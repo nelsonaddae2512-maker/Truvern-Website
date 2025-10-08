@@ -1,11 +1,11 @@
-﻿'use client';
+'use client';
 export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import Link from 'next/link';
 import { useI18n } from "../../lib/i18n";
 export function CTA(){
-  const { t, locale, setLocale } = ({ t: useT() });
+  const { t, locale, setLocale } = useI18n();
   return (
     <section className="px-6 py-12 md:py-16">
       <div className="max-w-6xl mx-auto border rounded-2xl p-8 text-center">

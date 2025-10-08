@@ -7,111 +7,127 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum Plan { free pro enterprise }
-enum TrustLevel { low medium high }
-enum EvidenceStatus { pending approved rejected }
+enum Plan {
+  free
+  pro
+  enterprise
+}
+
+enum TrustLevel {
+  low
+  medium
+  high
+}
+
+enum EvidenceStatus {
+  pending
+  approved
+  rejected
+}
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String?
-  memberships  Membership[]
-  vendors      Vendor[]     @relation("VendorOwner")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  memberships Membership[]
+  vendors     Vendor[]     @relation("VendorOwner")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Organization {
-  id                  String       @id @default(cuid())
-  name                String       @unique
-  plan                Plan         @default(free)
-  seats               Int          @default(3)
-  currentPeriodEnd    DateTime?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  vendors             Vendor[]
-  memberships         Membership[]
+  id               String          @id @default(cuid())
+  name             String          @unique
+  plan             Plan            @default(free)
+  seats            Int             @default(3)
+  currentPeriodEnd DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  vendors          Vendor[]
+  memberships      Membership[]
+  PendingInvite    PendingInvite[]
+  Usage            Usage[]
 }
 
 model Membership {
-  id              String        @id @default(cuid())
-  userId          String
-  organizationId  String
-  role            String?
-  createdAt       DateTime      @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String?
+  createdAt      DateTime @default(now())
 
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([organizationId])
 }
 
 model Vendor {
-  id              String       @id @default(cuid())
-  name            String
-  slug            String       @unique
-  organizationId  String
-  ownerId         String?
-  trustScore      Int          @default(0)
-  trustLevel      TrustLevel   @default(low)
-  trustUpdatedAt  DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String     @id @default(cuid())
+  name           String
+  slug           String     @unique
+  organizationId String
+  ownerId        String?
+  trustScore     Int        @default(0)
+  trustLevel     TrustLevel @default(low)
+  trustUpdatedAt DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner           User?        @relation("VendorOwner", fields: [ownerId], references: [id])
-  answers         Answer[]
-  evidence        Evidence[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?        @relation("VendorOwner", fields: [ownerId], references: [id])
+  answers      Answer[]
+  evidence     Evidence[]
 
   @@index([organizationId])
 }
 
 model Answer {
-  id              String          @id @default(cuid())
-  vendorId        String
-  frameworks      String[]?
-  criticality     String?
-  maturity        Int?
-  evidenceStatus  EvidenceStatus?
-  createdAt       DateTime        @default(now())
+  id             String          @id @default(cuid())
+  vendorId       String
+  frameworks     String[]        @default([])
+  criticality    String?
+  maturity       Int?
+  evidenceStatus EvidenceStatus?
+  createdAt      DateTime        @default(now())
 
-  vendor          Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@index([vendorId])
 }
 
 model Evidence {
-  id         String         @id @default(cuid())
-  vendorId   String
-  status     EvidenceStatus @default(pending)
-  url        String?
-  createdAt  DateTime       @default(now())
+  id        String         @id @default(cuid())
+  vendorId  String
+  status    EvidenceStatus @default(pending)
+  url       String?
+  createdAt DateTime       @default(now())
 
-  vendor     Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@index([vendorId])
 }
 
 model PendingInvite {
-  id              String        @id @default(cuid())
-  email           String        @unique
-  token           String        @unique
-  organizationId  String?
-  expiresAt       DateTime
-  createdAt       DateTime      @default(now())
+  id             String   @id @default(cuid())
+  email          String   @unique
+  token          String   @unique
+  organizationId String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
 
-  organization    Organization? @relation(fields: [organizationId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
 }
 
 model Usage {
-  id              String        @id @default(cuid())
-  organizationId  String
-  event           String
-  count           Int           @default(0)
-  createdAt       DateTime      @default(now())
+  id             String   @id @default(cuid())
+  organizationId String
+  event          String
+  count          Int      @default(0)
+  createdAt      DateTime @default(now())
 
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
 }

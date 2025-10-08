@@ -19,8 +19,8 @@ export function CTA(){
           <span>Language:</span>
           <select className="ml-2 border rounded px-2 py-1" value={locale} onChange={e=>setLocale(e.target.value)}>
             <option value="en">English</option>
-            <option value="es">EspaÃ±ol</option>
-            <option value="fr">FranÃ§ais</option>
+            <option value="es">EspaÃƒÂ±ol</option>
+            <option value="fr">FranÃƒÂ§ais</option>
           </select>
         </div>
       </div>

@@ -1,6 +1,6 @@
-
 'use client';
-import React from 'react';
+export const dynamic = 'force-dynamic';
+import React, { Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
@@ -16,7 +16,7 @@ export default function LoginPage(){
     if(res?.ok){ setSent(true); } else { alert('Unable to send magic link'); }
   }
 
-  return (
+  return (<Suspense fallback={null}>(
     <div className="max-w-sm mx-auto p-8">
       <h1 className="text-2xl font-bold mb-4">Sign in</h1>
       {!sent ? (
@@ -30,5 +30,5 @@ export default function LoginPage(){
       )}
       <div className="text-xs text-slate-500 mt-3">We’ll email a one‑time link. No passwords to remember.</div>
     </div>
-  );
+  ))</Suspense>);
 }

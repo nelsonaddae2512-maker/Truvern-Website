@@ -1,9 +1,11 @@
+﻿'use client';
+export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import Link from 'next/link';
 import { useI18n } from "../../lib/i18n";
 export function CTA(){
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale } = ({ t: useT() });
   return (
     <section className="px-6 py-12 md:py-16">
       <div className="max-w-6xl mx-auto border rounded-2xl p-8 text-center">
@@ -17,11 +19,12 @@ export function CTA(){
           <span>Language:</span>
           <select className="ml-2 border rounded px-2 py-1" value={locale} onChange={e=>setLocale(e.target.value)}>
             <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
+            <option value="es">EspaÃ±ol</option>
+            <option value="fr">FranÃ§ais</option>
           </select>
         </div>
       </div>
     </section>
   );
 }
+

@@ -34,7 +34,7 @@ export function SiteFooter(){
           <div className="mt-2"><a className="h-10 px-4 rounded-xl bg-slate-900 text-white inline-flex items-center" href="/subscribe">Start Free</a></div>
         </div>
       </div>
-      <div className="flex items-center justify-between text-xs text-slate-500 px-6 py-4 border-t"><span>© {new Date().getFullYear()} Truvern</span><LanguageSwitcher /></div>
+      <div className="flex items-center justify-between text-xs text-slate-500 px-6 py-4 border-t"><span>Â© {new Date().getFullYear()} Truvern</span><LanguageSwitcher /></div>
     </footer>
   );
 }

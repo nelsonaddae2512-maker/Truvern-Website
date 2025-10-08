@@ -1,1 +1,1 @@
-export { I18nProvider, useI18n } from "./Provider";
+export { I18nProvider, useI18n, useT } from "./Provider";

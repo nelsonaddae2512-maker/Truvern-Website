@@ -1,9 +1,10 @@
-export const dynamic = "force-static";
-export default function Home() {
+import React from "react";
+
+export default function HomePage(){
   return (
-    <div style={{padding:"2rem", maxWidth: 900, margin:"0 auto"}}>
-      <h1>Truvern</h1>
-      <p>.</p>
+    <div className="p-8 max-w-5xl mx-auto">
+      <h1 className="text-2xl font-semibold">Welcome to Truvern</h1>
+      <p className="mt-2">Home is rendering correctly.</p>
     </div>
   );
 }

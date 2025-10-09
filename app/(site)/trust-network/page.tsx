@@ -1,10 +1,12 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
-export default function Page() {
+export default function Page(){
   return (
-    <div style={{padding:"2rem", maxWidth: 900, margin: "0 auto"}}>
-      <h1>Trust Network</h1>
-      <p>How the Vendor Trust Network works</p>
-    </div>
+    <main className="p-8 max-w-5xl mx-auto">
+      <h1 className="text-3xl font-semibold">Trust Network</h1>
+      <p className="mt-3 text-neutral-700">
+        Vendors and buyers share a common source of truth, reducing duplicate questionnaires and speeding up deals.
+      </p>
+    </main>
   );
 }

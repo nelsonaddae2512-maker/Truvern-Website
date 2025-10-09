@@ -4,7 +4,8 @@ export const dynamic = "force-dynamic";
 export default function Page() {
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      {For Buyers}
+      <h1 className="text-3xl md:text-4xl font-bold">For Buyers</h1>
+      <p className="mt-3 text-gray-600">This page is rendering correctly.</p>
     </div>
   );
 }

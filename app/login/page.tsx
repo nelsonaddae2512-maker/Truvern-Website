@@ -1,34 +1,32 @@
-﻿'use client';
-export const dynamic = 'force-dynamic';
-import React, { Suspense } from 'react';
-import { signIn } from 'next-auth/react';
-import { useSearchParams } from 'next/navigation';
+"use client";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default function LoginPage(){
-  const params = useSearchParams();
-  const [email, setEmail] = React.useState('');
-  const [sent, setSent] = React.useState(false);
-  const error = params.get('error');
+function LoginInner(){
+  const sp = useSearchParams();
+  const emailPrefill = sp.get("email") || "";
+  return (
+    <main className="max-w-md mx-auto p-6">
+      <h1 className="text-2xl font-semibold mb-4">Login</h1>
+      <form method="post" action="/api/auth/signin/email" className="space-y-4">
+        <input
+          name="email"
+          type="email"
+          required
+          defaultValue={emailPrefill}
+          placeholder="you@company.com"
+          className="w-full border rounded p-3"
+        />
+        <button className="px-4 py-2 rounded bg-black text-white">Send magic link</button>
+      </form>
+    </main>
+  );
+}
 
-  async function onSubmit(e: React.FormEvent){
-    e.preventDefault();
-    const res = await signIn('email', { email, redirect: false });
-    if(res?.ok){ setSent(true); } else { alert('Unable to send magic link'); }
-  }
-
-  return (<Suspense fallback={null}>(
-    <div className="max-w-sm mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-4">Sign in</h1>
-      {!sent ? (
-        <form onSubmit={onSubmit} className="space-y-3">
-          <input className="border rounded w-full h-10 px-3" placeholder="you@company.com" type="email" value={email} onChange={e=>setEmail(e.target.value)} required />
-          <button className="h-10 w-full rounded bg-slate-900 text-white">Email me a magic link</button>
-          {error && <div className="text-sm text-rose-600">Login failed</div>}
-        </form>
-      ) : (
-        <div className="text-slate-700">Check your inbox for a secure signâ€‘in link.</div>
-      )}
-      <div className="text-xs text-slate-500 mt-3">Weâ€™ll email a oneâ€‘time link. No passwords to remember.</div>
-    </div>
-  ))</Suspense>);
+export default function Page(){
+  return (
+    <Suspense fallback={<div className="p-6">Loading…</div>}>
+      <LoginInner />
+    </Suspense>
+  );
 }

@@ -1,14 +1,9 @@
 export const dynamic = "force-static";
-export const metadata = {
-  title: "Home • Truvern"
-};
-export default function Page() {
+export default function Home() {
   return (
-    <main className="px-6 py-12 md:py-16">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-semibold mb-4">Home</h1>
-        <p className="text-neutral-600">This page is rendering correctly.</p>
-      </div>
-    </main>
+    <div style={{padding:"2rem", maxWidth: 900, margin:"0 auto"}}>
+      <h1>Truvern</h1>
+      <p>This page is rendering correctly.</p>
+    </div>
   );
 }

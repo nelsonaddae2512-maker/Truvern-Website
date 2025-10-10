@@ -1,12 +1,11 @@
-export const dynamic = "force-dynamic";
-
-export default function Page(){
+export const dynamic = "force-static";
+export default function Page() {
   return (
-    <main className="p-8 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-semibold">Trust Network</h1>
-      <p className="mt-3 text-neutral-700">
-        Vendors and buyers share a common source of truth, reducing duplicate questionnaires and speeding up deals.
-      </p>
-    </main>
+    <div className="px-6 py-12 md:py-16">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-semibold mb-4">Trust Network</h1>
+        <p className="text-neutral-600">How verification and sharing works across the network.</p>
+      </div>
+    </div>
   );
 }

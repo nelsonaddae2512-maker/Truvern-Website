@@ -1,9 +1,11 @@
-﻿export default function PrivacyPage() {
+/** Static Privacy page */
+export const dynamic = "force-static";
+
+export default function Page() {
   return (
-    <main className="prose max-w-3xl mx-auto p-8">
+    <main className="prose mx-auto p-8">
       <h1>Privacy Policy</h1>
-      <p>This page is rendering correctly.</p>
-      <p>Replace this placeholder with your real privacy policy content.</p>
+      <p>Replace this with your real policy.</p>
     </main>
   );
 }

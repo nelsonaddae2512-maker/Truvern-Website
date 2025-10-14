@@ -27,3 +27,4 @@ Thumbs.db
 *.tar
 *.gz
 .vercel
+.env*.local

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)] [string]$Repo,
   [string]$Project = "",
   [string]$Org = "",
@@ -8,7 +8,7 @@
 $ErrorActionPreference = "Stop"
 
 if (-not $env:VERCEL_TOKEN -or [string]::IsNullOrWhiteSpace($env:VERCEL_TOKEN)) {
-  Write-Error "VERCEL_TOKEN is not set. Run:  setx VERCEL_TOKEN ""<your-token>""  then reopen PowerShell."
+  Write-Error "VERCEL_TOKEN is not set. Run:  setx VERCEL_TOKEN ""<your-token>""  then reopen PowerShell -NoExit."
 }
 
 if (-not (Test-Path $Repo)) { Write-Error "Repo path not found: $Repo" }

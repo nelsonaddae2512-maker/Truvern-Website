@@ -1,4 +1,4 @@
-﻿import { NextResponse, NextRequest } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 
 import { withAuth } from "next-auth/middleware";
 
@@ -19,4 +19,3 @@ export async function middleware(request: NextRequest) {
   res.headers.set("X-XSS-Protection", "0");
   return res;
 }
-

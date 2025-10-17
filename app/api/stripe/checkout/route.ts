@@ -24,7 +24,7 @@ export async function POST(req: NextRequest){ const { default: Stripe } = await 
     const body = await req.json().catch(() => ({} as any));
     const secret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET || "";
     if (!secret) {
-      // Don’t throw during build; return a helpful message
+      // Donâ€™t throw during build; return a helpful message
       return NextResponse.json({ ok: false, error: "stripe_key_missing" }, { status: 200 });
     }
 

@@ -1,0 +1,12 @@
+﻿if (!org) {
+  org = await prisma.organization.create({
+    data: {
+      id: randomUUID(),          // required String id
+      name,
+      plan: Plan.PRO,            // change to Plan.pro if your enum is lowercase
+      seats,
+      updatedAt: new Date(),     // required if your schema doesn't have @updatedAt
+      // Add any other required fields here (e.g., slug, ownerId, domain, etc.)
+    } satisfies Prisma.OrganizationCreateInput
+  })
+}

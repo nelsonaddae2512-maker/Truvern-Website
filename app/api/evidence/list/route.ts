@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    // Return a shape that won’t blow up during build-time analysis
+    // Return a shape that wonâ€™t blow up during build-time analysis
     return NextResponse.json({ items: [] }, { status: 200 });
   } catch {
     // Never throw from here in build analysis

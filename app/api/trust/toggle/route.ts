@@ -35,7 +35,7 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     // Compute next state (toggle if not supplied)
     const nextState: boolean = hasState ? Boolean(body.state) : !Boolean(vendor.publicTrust);
 
-    // Update; if schema lacks publicTrust, this will throw — catch and soft return
+    // Update; if schema lacks publicTrust, this will throw â€” catch and soft return
     try {
       await prisma.vendor.update({
         where: { id: vendor.id },

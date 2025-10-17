@@ -31,6 +31,6 @@ async function safe(upserter){
     create: { name: "Demo Vendor", slug: "demo-vendor", ownerId: user?.id }
   }));
 
-  console.log("✅ Seed complete");
+  console.log("âœ… Seed complete");
   await prisma.$disconnect();
 })();

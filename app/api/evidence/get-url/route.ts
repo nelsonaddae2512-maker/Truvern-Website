@@ -30,7 +30,7 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     const evidenceId = typeof body.evidenceId === "string" ? body.evidenceId : null;
 
     // Lazy import prisma only at request time (prevents build-time init)
-    // If you don’t need DB here yet, you can remove these two lines later.
+    // If you donâ€™t need DB here yet, you can remove these two lines later.
     try {
       const mod = (await import("@/lib/prisma")) as { prisma?: any };
       if (mod?.prisma && evidenceId) {

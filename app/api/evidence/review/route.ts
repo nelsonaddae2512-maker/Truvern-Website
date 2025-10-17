@@ -36,7 +36,7 @@ export async function GET(){ const { getServerSession } = await import("next-aut
 
     return NextResponse.json({ items }, { status: 200 });
   } catch {
-    // Never break “collect page data”
+    // Never break â€œcollect page dataâ€
     return NextResponse.json({ items: [], error: "internal" }, { status: 200 });
   }
 }

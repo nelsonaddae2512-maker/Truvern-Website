@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 export const metadata = { title: "Truvern" };
 
@@ -9,3 +9,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+

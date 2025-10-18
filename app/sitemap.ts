@@ -1,4 +1,4 @@
-
+﻿
 import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://truvern.com";
@@ -12,3 +12,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: base + "/trust" }
   ];
 }
+
+

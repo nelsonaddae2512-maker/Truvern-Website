@@ -1,4 +1,4 @@
-type Dict = Record<string, string>;
+﻿type Dict = Record<string, string>;
 
 const dictionaries: Record<string, Dict> = {
   en: {
@@ -10,3 +10,4 @@ export function tServer(key: string, locale: string = "en"): string {
   const dict = dictionaries[locale] || dictionaries.en;
   return dict[key] || key;
 }
+

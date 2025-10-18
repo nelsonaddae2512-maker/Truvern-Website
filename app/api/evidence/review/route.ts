@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 
@@ -36,7 +36,8 @@ export async function GET(){ const { getServerSession } = await import("next-aut
 
     return NextResponse.json({ items }, { status: 200 });
   } catch {
-    // Never break â€œcollect page dataâ€
+    // Never break Ã¢â‚¬Å“collect page dataÃ¢â‚¬Â
     return NextResponse.json({ items: [], error: "internal" }, { status: 200 });
   }
 }
+

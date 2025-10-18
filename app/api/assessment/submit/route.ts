@@ -6,7 +6,9 @@ export async function POST(req: Request) {
     const form = await req.formData()
     const companyName = String(form.get('companyName') ?? '')
     const contactEmail = String(form.get('contactEmail') ?? '')
-    const answersJson = String(form.get('answersJson') ?? '[]')
+    const answersStr = String(form.get('answersJson') ?? '[]');
+  let answersJson: any;
+  try { answersJson = JSON.parse(answersStr); } catch { answersJson = []; }
     const rec = await prisma.assessmentSubmission.create({
       data: { companyName, contactEmail, answersJson },
     })
@@ -16,3 +18,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'SUBMIT_FAILED' }, { status: 500 })
   }
 }
+

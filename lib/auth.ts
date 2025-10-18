@@ -1,4 +1,4 @@
-import type { NextAuthOptions } from 'next-auth'
+﻿import type { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/src/lib/db'
 
@@ -10,3 +10,5 @@ export const authOptions: NextAuthOptions = {
 }
 
 export default authOptions
+
+

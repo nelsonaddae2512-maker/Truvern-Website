@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 export function useT(){
   try{
     // Lazy require so SSR/prerender won't choke if alias or context isn't ready.
@@ -9,3 +9,4 @@ export function useT(){
   }catch{}
   return (k: string) => k;
 }
+

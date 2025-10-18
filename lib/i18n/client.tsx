@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 
 type Dict = Record<string, string>;
@@ -25,3 +25,4 @@ export function I18nProvider({children}:{children:React.ReactNode}){
 }
 
 export function useI18n(){ return React.useContext(I18nContext); }
+

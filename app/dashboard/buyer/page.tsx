@@ -1,7 +1,7 @@
-export const dynamic = "force-static";
+﻿export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Buyer Workspace • Truvern",
+  title: "Buyer Workspace â€¢ Truvern",
   description: "Review vendors and request evidence."
 };
 
@@ -15,3 +15,4 @@ export default function Page() {
     </main>
   );
 }
+

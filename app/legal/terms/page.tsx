@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 export default function TermsPage() {
   return (
@@ -9,3 +9,4 @@ export default function TermsPage() {
     </main>
   );
 }
+

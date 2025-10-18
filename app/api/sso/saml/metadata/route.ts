@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export async function GET(){
   const xml = `<?xml version="1.0"?>
@@ -10,3 +10,5 @@ export async function GET(){
 </EntityDescriptor>`;
   return new Response(xml, { headers: { 'content-type':'application/samlmetadata+xml' } });
 }
+
+

@@ -1,4 +1,4 @@
-
+﻿
 export default function SSOSettings(){
   return (
     <div className="max-w-3xl mx-auto p-8 space-y-3">
@@ -9,3 +9,5 @@ export default function SSOSettings(){
     </div>
   );
 }
+
+

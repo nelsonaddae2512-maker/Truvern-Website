@@ -1,7 +1,7 @@
-export const dynamic = "force-static";
+﻿export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Docs • Truvern",
+  title: "Docs â€¢ Truvern",
   description: "Developer & API documentation."
 };
 
@@ -15,3 +15,4 @@ export default function Page() {
     </main>
   );
 }
+

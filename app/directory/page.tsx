@@ -1,7 +1,7 @@
-export const dynamic = "force-static";
+﻿export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Directory • Truvern",
+  title: "Directory â€¢ Truvern",
   description: "Browse vendors with verified trust badges."
 };
 
@@ -15,3 +15,4 @@ export default function Page() {
     </main>
   );
 }
+

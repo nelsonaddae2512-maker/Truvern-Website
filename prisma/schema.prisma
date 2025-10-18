@@ -14,3 +14,40 @@ model Vendor {
   category  String
   country   String
 }
+model AssessmentSubmission {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  // add more fields later as needed
+  answersJson Json?
+  companyName String?
+  contactEmail String?
+}
+model PendingInvite {
+  organizationId String?
+  id         String   @id @default(uuid())
+  email      String?
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+enum Plan {
+  pro
+}
+model Organization {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  plan      Plan
+  seats     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Usage {
+  id             String   @id @default(uuid())
+  organizationId String
+  createdAt      DateTime @default(now())
+  // Optional extras you can use later:
+  // route        String?
+  // action       String?
+  // meta         Json?
+}

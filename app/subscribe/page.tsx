@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 
@@ -17,7 +17,7 @@ function Plan({title,descr,tier}:{title:string;descr:string;tier:'starter'|'pro'
         <div className="text-lg font-semibold">{title}</div>
         <div className="text-slate-600 text-sm mt-1">{descr}</div>
       </div>
-      <button onClick={buy} disabled={loading} className="mt-6 h-10 px-4 rounded-xl bg-slate-900 text-white">{loading?'Loading…':'Choose ' + title}</button>
+      <button onClick={buy} disabled={loading} className="mt-6 h-10 px-4 rounded-xl bg-slate-900 text-white">{loading?'Loadingâ€¦':'Choose ' + title}</button>
     </div>
   );
 }
@@ -40,3 +40,5 @@ export default function SubscribePage(){
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     // Compute next state (toggle if not supplied)
     const nextState: boolean = hasState ? Boolean(body.state) : !Boolean(vendor.publicTrust);
 
-    // Update; if schema lacks publicTrust, this will throw â€” catch and soft return
+    // Update; if schema lacks publicTrust, this will throw Ã¢â‚¬â€ catch and soft return
     try {
       await prisma.vendor.update({
         where: { id: vendor.id },
@@ -50,3 +50,4 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     return NextResponse.json({ ok: false, error: "internal" }, { status: 200 });
   }
 }
+

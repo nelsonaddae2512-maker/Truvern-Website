@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import type { NextRequest } from "next/server";
 
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest){ const { prisma } = await import("@/
   try {
     const slug = (new URL(req.url).searchParams.get("slug") || "").trim().toLowerCase();
     if (!slug) {
-      const svg = svgBadge("Trust", "â€”", "#6b7280");
+      const svg = svgBadge("Trust", "Ã¢â‚¬â€", "#6b7280");
       return new Response(svg, { status: 200, headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" } });
     }
 
@@ -57,3 +57,4 @@ export async function GET(req: NextRequest){ const { prisma } = await import("@/
     return new Response(svg, { status: 200, headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" } });
   }
 }
+

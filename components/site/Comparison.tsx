@@ -1,15 +1,15 @@
-
+﻿
 import React from 'react';
 import Link from 'next/link';
 
 export function Comparison(){
   const rows = [
-    { feature:'Reusable Trust Profile', you:'✓', others:'—' },
-    { feature:'Evidence-backed score', you:'✓', others:'Limited' },
-    { feature:'CISO override & disclosure caps', you:'✓', others:'—' },
-    { feature:'Board Report PDF', you:'✓', others:'Add-on' },
-    { feature:'Public directory + badge', you:'✓', others:'—' },
-    { feature:'Jira/Slack remediation', you:'✓', others:'Limited' }
+    { feature:'Reusable Trust Profile', you:'âœ“', others:'â€”' },
+    { feature:'Evidence-backed score', you:'âœ“', others:'Limited' },
+    { feature:'CISO override & disclosure caps', you:'âœ“', others:'â€”' },
+    { feature:'Board Report PDF', you:'âœ“', others:'Add-on' },
+    { feature:'Public directory + badge', you:'âœ“', others:'â€”' },
+    { feature:'Jira/Slack remediation', you:'âœ“', others:'Limited' }
   ];
   return (
     <section className="px-6 py-12 md:py-16 bg-slate-50">
@@ -43,3 +43,5 @@ export function Comparison(){
     </section>
   );
 }
+
+

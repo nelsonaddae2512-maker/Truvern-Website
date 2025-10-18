@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { Plan } from '@prisma/client';
+import { Prisma } from "@prisma/client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ async function getOrCreateOrg(email: string): Promise<Org> {
     data: {
       id: randomUUID(),          // required String id
       name,
-      plan: Plan.pro,            // change to Plan.pro if your enum is lowercase
+  plan: 'pro',
       seats: 10,
       updatedAt: new Date(),     // required if your schema doesn't have @updatedAt
       // Add any other required fields here (e.g., slug, ownerId, domain, etc.)
@@ -38,6 +38,8 @@ async function getOrCreateOrg(email: string): Promise<Org> {
 }
   return { id: String(org.id), name: org.name, plan: (org as any).plan, seats: (org as any).seats };
 }
+
+
 
 
 

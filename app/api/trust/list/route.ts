@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -38,3 +38,4 @@ export async function GET(req: NextRequest){ const { prisma } = await import("@/
     return NextResponse.json({ ok: true, items: [], total: 0 }, { status: 200 });
   }
 }
+

@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 import { useI18n } from "../../lib/i18n";
@@ -14,3 +14,5 @@ export function LanguageSwitcher(){
     </select>
   );
 }
+
+

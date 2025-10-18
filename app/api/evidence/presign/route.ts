@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -22,3 +22,5 @@ export async function POST(req: Request){ const { getServerSession } = await imp
 }
 
 export async function GET(){ return new Response('{"ok":true}',{ status:200, headers:{ "Content-Type":"application/json" }}); }
+
+

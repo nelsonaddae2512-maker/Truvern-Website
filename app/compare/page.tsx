@@ -1,7 +1,7 @@
-export const dynamic = "force-static";
+﻿export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Compare • Truvern",
+  title: "Compare â€¢ Truvern",
   description: "How Truvern compares to point tools."
 };
 
@@ -15,3 +15,4 @@ export default function Page() {
     </main>
   );
 }
+

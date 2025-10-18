@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 import Link from 'next/link';
@@ -27,7 +27,7 @@ export function SiteNav(){
           <Link href="/subscribe" className="h-9 px-3 rounded border">{t('nav.subscribe')}</Link>
           <AuthButtons />
         </nav><LanguageSwitcher />
-        <button className="md:hidden" onClick={()=>setOpen(!open)} aria-label="Menu">☰</button>
+        <button className="md:hidden" onClick={()=>setOpen(!open)} aria-label="Menu">â˜°</button>
       </div>
       {open && (
         <div className="md:hidden px-6 pb-3 flex flex-col gap-2 text-sm">
@@ -44,3 +44,5 @@ export function SiteNav(){
     </header>
   );
 }
+
+

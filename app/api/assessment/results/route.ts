@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     if (!id) return NextResponse.json({ ok:false, error:'MISSING_ID' }, { status:400 })
     const rec = await prisma.assessmentSubmission.findUnique({ where: { id } })
     if (!rec) return NextResponse.json({ ok:false, error:'NOT_FOUND' }, { status:404 })
-    const { score, tier } = computeScore(rec.answersJson)
+    const { score, tier } = computeScore(JSON.stringify(rec.answersJson ?? {}))
     return NextResponse.json({ ok:true, submission: rec, score, tier })
   } catch (e) {
     console.error(e)

@@ -1,7 +1,7 @@
-export const dynamic = "force-static";
+﻿export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Security • Truvern",
+  title: "Security â€¢ Truvern",
   description: "Security, compliance and data handling."
 };
 
@@ -15,3 +15,4 @@ export default function Page() {
     </main>
   );
 }
+

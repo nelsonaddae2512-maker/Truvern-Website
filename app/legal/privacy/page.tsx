@@ -1,4 +1,4 @@
-/** Static Privacy page */
+﻿/** Static Privacy page */
 export const dynamic = "force-static";
 
 export default function Page() {
@@ -9,3 +9,4 @@ export default function Page() {
     </main>
   );
 }
+

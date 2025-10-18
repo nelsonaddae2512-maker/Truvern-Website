@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     const evidenceId = typeof body.evidenceId === "string" ? body.evidenceId : null;
 
     // Lazy import prisma only at request time (prevents build-time init)
-    // If you donâ€™t need DB here yet, you can remove these two lines later.
+    // If you donÃ¢â‚¬â„¢t need DB here yet, you can remove these two lines later.
     try {
       const mod = (await import("@/lib/prisma")) as { prisma?: any };
       if (mod?.prisma && evidenceId) {
@@ -51,3 +51,4 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     return NextResponse.json({ ok: false, error: "internal" }, { status: 200 });
   }
 }
+

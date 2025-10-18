@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 export default function GlobalError({ error }: { error: Error & { digest?: string } }){
   return (
     <html><body>
@@ -9,3 +9,4 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
     </body></html>
   );
 }
+

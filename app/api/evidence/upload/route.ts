@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -60,3 +60,4 @@ export async function POST(req: NextRequest){ const { prisma } = await import("@
     return NextResponse.json({ ok: false, error: "internal" }, { status: 200 });
   }
 }
+

@@ -1,4 +1,4 @@
-
+﻿
 let upstash: any = null;
 try {
   const { Ratelimit } = require("@upstash/ratelimit");
@@ -21,3 +21,5 @@ export async function rateLimit(ip: string, keyPrefix="rl:trust"){
   if (slot.count >= 60) return { allowed:false, remaining:0, reset: slot.exp };
   slot.count += 1; return { allowed:true, remaining: 60-slot.count, reset: slot.exp };
 }
+
+

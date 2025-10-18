@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 export const dynamic = 'force-dynamic';
 
 import React from 'react';
@@ -19,12 +19,14 @@ export function CTA(){
           <span>Language:</span>
           <select className="ml-2 border rounded px-2 py-1" value={locale} onChange={e=>setLocale(e.target.value)}>
             <option value="en">English</option>
-            <option value="es">EspaÃƒÆ’Ã‚Â±ol</option>
-            <option value="fr">FranÃƒÆ’Ã‚Â§ais</option>
+            <option value="es">EspaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±ol</option>
+            <option value="fr">FranÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ais</option>
           </select>
         </div>
       </div>
     </section>
   );
 }
+
+
 

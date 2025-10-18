@@ -1,4 +1,4 @@
-
+﻿
 export type TrustInputs = {
   answers: Array<{ answer?: string; maturity?: number; criticality: "Low"|"Medium"|"High"; frameworks?: string[] }>;
   evidenceApproved: number;
@@ -27,3 +27,5 @@ export function computeTrustScore(i: TrustInputs){
   const level = raw>=80 ? "High" : raw>=60 ? "Medium" : "Low";
   return { score: raw, level };
 }
+
+

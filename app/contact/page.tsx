@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 export default function Contact(){
@@ -18,8 +18,10 @@ export default function Contact(){
           <button className="h-10 w-full rounded bg-slate-900 text-white">Send</button>
         </form>
       ) : (
-        <div className="text-green-700">Thanks! We’ll get back to you soon.</div>
+        <div className="text-green-700">Thanks! Weâ€™ll get back to you soon.</div>
       )}
     </div>
   );
 }
+
+

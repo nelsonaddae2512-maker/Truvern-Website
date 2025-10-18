@@ -1,4 +1,4 @@
-
+﻿
 import crypto from 'crypto';
 const secret = process.env.INVITE_SECRET || 'dev_secret';
 const ttlDays = Number(process.env.INVITE_TTL_DAYS || '7');
@@ -23,3 +23,5 @@ export function verifyInviteToken(token: string): InvitePayload | null {
   if(payload.exp < Math.floor(Date.now()/1000)) return null;
   return payload;
 }
+
+

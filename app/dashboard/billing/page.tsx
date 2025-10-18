@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
@@ -41,7 +41,7 @@ export default function BillingPage(){
         </div>
         <div className="border rounded p-4">
           <div className="text-xs text-slate-500">Top usage type (30d)</div>
-          <div className="text-3xl font-bold">{Object.entries(usage?.totals || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—'}</div>
+          <div className="text-3xl font-bold">{Object.entries(usage?.totals || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'â€”'}</div>
         </div>
       </div>
 
@@ -80,3 +80,5 @@ export default function BillingPage(){
     </div>
   );
 }
+
+

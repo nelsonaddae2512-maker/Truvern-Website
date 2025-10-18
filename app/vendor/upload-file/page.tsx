@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 
@@ -11,14 +11,14 @@ export default function UploadFile(){
   async function submit(e: React.FormEvent){
     e.preventDefault();
     if(!file) return;
-    setStatus('Getting upload URL…');
+    setStatus('Getting upload URLâ€¦');
     const r = await fetch('/api/evidence/presign', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ filename: file.name, type: file.type || 'application/octet-stream' }) });
     const j = await r.json().catch(()=>null);
     if(!j?.url){ setStatus(j?.error || 'Presign failed'); return; }
-    setStatus('Uploading to S3…');
+    setStatus('Uploading to S3â€¦');
     const up = await fetch(j.url, { method:'PUT', headers:{ 'content-type': file.type || 'application/octet-stream' }, body: file });
     if(!up.ok){ setStatus('S3 upload failed'); return; }
-    setStatus('Finalizing…');
+    setStatus('Finalizingâ€¦');
     const link = `s3://${process.env.NEXT_PUBLIC_APP_DOMAIN||'bucket'}/${j.key}`; // not public; store as URL in evidence table
     const save = await fetch('/api/evidence/upload', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ vendorId, questionId, url: link }) });
     const sj = await save.json().catch(()=>null);
@@ -27,7 +27,7 @@ export default function UploadFile(){
 
   return (
     <div className="max-w-lg mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-4">Upload evidence (File → S3)</h1>
+      <h1 className="text-2xl font-bold mb-4">Upload evidence (File â†’ S3)</h1>
       <form onSubmit={submit} className="space-y-3">
         <input className="border rounded w-full h-10 px-3" placeholder="Vendor ID" value={vendorId} onChange={e=>setVendorId(e.target.value)} required />
         <input className="border rounded w-full h-10 px-3" placeholder="Question ID" value={questionId} onChange={e=>setQuestionId(e.target.value)} required />
@@ -39,3 +39,5 @@ export default function UploadFile(){
     </div>
   );
 }
+
+

@@ -1,11 +1,10 @@
-﻿export const runtime = "nodejs";
+import prisma from "@/lib/db";
+
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-
-type AnswerLite = { frameworks?: string[] | null };
-type VendorLite = { id: string; name: string; slug: string };
-
+import { NextResponse } from "next/server";type AnswerLite = { frameworks?: string[] | null };
+type VendorLite = { id: string; name: string; slug: string }
 export async function GET(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
   try {
     const url = new URL(req.url);

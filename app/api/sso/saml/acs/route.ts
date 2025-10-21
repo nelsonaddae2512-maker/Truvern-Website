@@ -1,47 +1,93 @@
-import { randomUUID } from 'crypto';
-import { Prisma } from "@prisma/client";
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import prisma from "@/lib/db";
+
+
+
+
 
 import { NextResponse } from "next/server";
 
-type Org = { id: string; name: string; plan?: string; seats?: number };
+
+import { randomUUID } from "crypto"
+
+
+export const runtime = "nodejs"
+
+
+export const dynamic = "force-dynamic";
+
+
+
+
+
+type Org = { id: string; name: string; plan?: string; seats?: number }
+
 
 export async function POST(req: Request) {
+
+
   try {
-    const { email } = await req.json().catch(() => ({ email: "" }));
-    if (!email) return NextResponse.json({ ok: false, error: "missing email" }, { status: 200 });
-    const org = await getOrCreateOrg(email);
-    return NextResponse.json({ ok: true, org }, { status: 200 });
-  } catch {
-    return NextResponse.json({ ok: false, error: "internal" }, { status: 200 });
+
+
+    const { domain } = await req.json();
+
+
+    const name = `${domain} Org (SSO)`;
+
+
+
+
+
+    let org = await prisma.organization.findFirst({ where: { name } });
+
+
+    if (!org) {
+
+
+      org = await prisma.organization.create({
+
+
+        data: {
+
+
+          id: randomUUID(),
+
+
+          name,
+
+
+          plan: "free",
+
+
+          seats: 1,
+
+
+
+
+        },
+
+
+      });
+
+
+    }
+
+
+
+
+
+    return NextResponse.json({ success: true, org });
+
+
   }
-}
-
-async function getOrCreateOrg(email: string): Promise<Org> {
-  const { prisma } = await import("@/lib/prisma");
-
-  const domain = email.split("@")[1]?.toLowerCase() || "unknown";
-  const name = `${domain} Org (SSO)`;
-
-  let org = await prisma.organization.findFirst({ where: { name } });
-  if (!org) {
-  org = await prisma.organization.create({
-    data: {
-      id: randomUUID(),          // required String id
-      name,
-  plan: 'pro',
-      seats: 10,
-      updatedAt: new Date(),     // required if your schema doesn't have @updatedAt
-      // Add any other required fields here (e.g., slug, ownerId, domain, etc.)
-    }})
-}
-  return { id: String(org.id), name: org.name, plan: (org as any).plan, seats: (org as any).seats };
+catch (err) {
+  // Normalize unknown error to a string
+  const _errMsg =
+    err instanceof Error
+      ? err.message
+      : (typeof err === 'string' ? err : (() => { try { return JSON.stringify(err); } catch { return 'Unknown error'; } })());
+  try { console.error(err); } catch {}
+  return NextResponse.json({ success: false, error: _errMsg }, { status: 500 });
 }
 
 
-
-
-
-
-
+}

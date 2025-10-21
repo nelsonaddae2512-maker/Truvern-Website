@@ -1,5 +1,7 @@
-﻿export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import prisma from "@/lib/db";
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 export async function GET(){
   const xml = `<?xml version="1.0"?>
 <EntityDescriptor entityID="https://truvern.com/sso/saml" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
@@ -10,5 +12,4 @@ export async function GET(){
 </EntityDescriptor>`;
   return new Response(xml, { headers: { 'content-type':'application/samlmetadata+xml' } });
 }
-
 

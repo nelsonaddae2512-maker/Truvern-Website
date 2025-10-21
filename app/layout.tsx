@@ -1,12 +1,23 @@
-﻿import React from "react";
+﻿import "./globals.css";
+import type { Metadata } from "next";
+import SiteNav from "../components/site/SiteNav";
+import Footer from "../components/site/Footer";
 
-export const metadata = { title: "Truvern" };
+export const metadata: Metadata = {
+  title: { default: "Truvern", template: "%s • Truvern" },
+  description: "Truvern helps teams assess, compare, and continuously monitor third-party vendors.",
+  icons: { icon: "/favicon.svg", apple: "/favicon.svg" },
+  openGraph: { title: "Truvern", description: "Assess, compare, and monitor third-party vendors." }
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SiteNav />
+        {children}
+        <Footer />
+      </body>
     </html>
   );
 }
-

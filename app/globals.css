@@ -1,8 +1,16 @@
-
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html, body { min-height: 100%; }
-body { color: #0f172a; background: #ffffff; }
-a { color: inherit; }
+:root { --bg: #f7fafc; --fg: #0f172a; --muted: #64748b; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); }
+
+.container { @apply mx-auto max-w-6xl px-6; }
+.btn { @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition; }
+.btn-primary { @apply bg-black text-white hover:bg-zinc-800; }
+.btn-outline { @apply border border-zinc-300 hover:bg-zinc-50; }
+.badge { @apply inline-flex items-center rounded-full border px-3 py-1 text-sm text-zinc-600; }
+.h1 { @apply text-5xl font-extrabold tracking-tight; }
+.h2 { @apply text-4xl font-extrabold tracking-tight; }
+.lead { @apply mt-4 text-zinc-600 max-w-2xl; }

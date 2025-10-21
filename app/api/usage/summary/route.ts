@@ -1,9 +1,8 @@
-﻿export const runtime = "nodejs";
+import prisma from "@/lib/db";
+
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic";
-
-import { NextResponse } from "next/server";
-
-/**
+import { NextResponse } from "next/server";/**
  * Returns a usage summary for the current user's organization.
  * - Lazy-imports NextAuth and Prisma inside the handler (no top-level side effects)
  * - Soft-fails to {} if schema/table is missing

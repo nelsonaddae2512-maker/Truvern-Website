@@ -1,0 +1,34 @@
+﻿
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Plan {
+  free
+  pro
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  free
+  pro
+}
+
+model Organization {
+  plan      Plan     @default(free)
+  seats     Int      @default(1)
+
+
+
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+

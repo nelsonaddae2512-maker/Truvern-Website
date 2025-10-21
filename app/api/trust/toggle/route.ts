@@ -1,9 +1,9 @@
-﻿export const runtime = "nodejs";
+import prisma from "@/lib/db";
+
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic";
 import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-
-/** Build-safe GET so Next's collect-page-data never fails */
+import { NextResponse } from "next/server";/** Build-safe GET so Next's collect-page-data never fails */
 export async function GET(){ const { prisma } = await import("@/lib/prisma"); 
   return NextResponse.json({ ok: true }, { status: 200 });
 }

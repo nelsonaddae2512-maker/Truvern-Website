@@ -7,47 +7,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Vendor {
-  id        String   @id @default(uuid())
-  name      String
-  website   String
-  category  String
-  country   String
-}
-model AssessmentSubmission {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  // add more fields later as needed
-  answersJson Json?
-  companyName String?
-  contactEmail String?
-}
-model PendingInvite {
-  organizationId String?
-  id         String   @id @default(uuid())
-  email      String?
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  createdAt DateTime   @default(now())
+  evidence  Evidence[]
 }
 
-enum Plan {
-  pro
+model Evidence {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Fields used by app/api/evidence/upload/route.ts
+  vendor   String? // optional (line sets vendor ?? undefined)
+  filename String
+  url      String
+  size     Int?
+
+  data Json?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
+
+model AssessmentSubmission {
+  id           String   @id @default(cuid())
+  companyName  String
+  contactEmail String
+  answersJson  Json
+  createdAt    DateTime @default(now())
+}
+
 model Organization {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   name      String   @unique
-  plan      Plan
-  seats     Int?
+  domain    String?
+  plan      String   @default("free")
+  seats     Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Usage     Usage[]
 }
+
 model Usage {
-  id             String   @id @default(uuid())
+  id             String   @id @default(cuid())
   organizationId String
   createdAt      DateTime @default(now())
-  // Optional extras you can use later:
-  // route        String?
-  // action       String?
-  // meta         Json?
+
+  // Optional analytics fields you might log
+  endpoint String?
+  tokens   Int?
+  meta     Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
 }

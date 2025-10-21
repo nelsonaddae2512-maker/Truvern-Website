@@ -1,18 +1,5 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/src/lib/db'
-import { computeScore } from '@/src/lib/scoring'
+import prisma from "@/lib/db";
 
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get('id')
-    if (!id) return NextResponse.json({ ok:false, error:'MISSING_ID' }, { status:400 })
-    const rec = await prisma.assessmentSubmission.findUnique({ where: { id } })
-    if (!rec) return NextResponse.json({ ok:false, error:'NOT_FOUND' }, { status:404 })
-    const { score, tier } = computeScore(JSON.stringify(rec.answersJson ?? {}))
-    return NextResponse.json({ ok:true, submission: rec, score, tier })
-  } catch (e) {
-    console.error(e)
-    return NextResponse.json({ ok:false, error:'RESULTS_FAILED' }, { status:500 })
-  }
-}
+import { NextResponse } from "next/server"
+export const dynamic = "force-dynamic"
+export async function GET() { return NextResponse.json({ ok: true, source: "api/assessment/results" }); }

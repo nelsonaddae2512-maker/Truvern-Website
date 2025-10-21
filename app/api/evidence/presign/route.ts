@@ -1,9 +1,9 @@
-﻿export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import prisma from "@/lib/db";
 
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server";import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 export async function POST(req: Request){ const { getServerSession } = await import("next-auth"); const { authOptions } = await import("@/lib/auth"); 
   const session = await getServerSession(authOptions);
   if(!session?.user) return NextResponse.json({ error:'Unauthorized' }, { status: 401 });
@@ -22,5 +22,4 @@ export async function POST(req: Request){ const { getServerSession } = await imp
 }
 
 export async function GET(){ return new Response('{"ok":true}',{ status:200, headers:{ "Content-Type":"application/json" }}); }
-
 

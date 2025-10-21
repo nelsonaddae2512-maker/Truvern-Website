@@ -1,63 +1,44 @@
-﻿export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import prisma from "@/lib/db";
 
-/**
- * GET: benign response so Next's build-time "collect page data" never fails.
- */
-export async function GET(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
-  try {
-    const q = new URL(req.url).searchParams;
-    const vendorId = q.get("vendorId");
-    return NextResponse.json({ ok: true, vendorId: vendorId || null }, { status: 200 });
-  } catch {
-    return NextResponse.json({ ok: false }, { status: 200 });
+import { NextResponse } from "next/server";import type { Session } from "next-auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../../../src/lib/auth";
+import { put } from "@vercel/blob"
+export const runtime = "nodejs"; // required for file uploads
+
+export async function POST(req: Request) {
+  type SessionWithId = Session & { user: { id: string } }; const session = (await getServerSession(authOptions)) as SessionWithId | null;
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-}
-
-/**
- * POST: accept JSON { vendorId, filename, contentType, size } and create a DB stub.
- * Prisma is lazy-imported so we don't touch @prisma/client at build time.
- */
-export async function POST(req: NextRequest){ const { prisma } = await import("@/lib/prisma"); 
-  try {
-    const body = await req.json().catch(() => ({} as any));
-    const vendorId = body?.vendorId ?? null;
-    const filename = typeof body?.filename === "string" ? body.filename : null;
-    const contentType = typeof body?.contentType === "string" ? body.contentType : null;
-    const size = Number.isFinite(body?.size) ? Number(body.size) : null;
-
-    // Lazy import prisma only at request time
-    let prisma: any = null;
-    try { prisma = (await import("@/lib/prisma"))?.prisma ?? null; } catch {}
-
-    // If you don't need DB yet, skip this block safely
-    let evidenceId: string | null = null;
-    if (prisma && vendorId && filename) {
-      try {
-        const row = await prisma.evidence.create({
-          data: {
-            vendorId: vendorId as any,
-            filename,
-            contentType: contentType || "application/octet-stream",
-            size: size || 0,
-            status: "pending",
-            updatedAt: new Date()
-          },
-          select: { id: true }
-        });
-        evidenceId = row?.id ?? null;
-      } catch {
-        // swallow DB errors in hardened route to avoid 500 during build
-      }
-    }
-
-    // Return a placeholder upload URL shape (wire S3/GCS later)
-    const uploadUrl = filename ? `about:blank#upload-${encodeURIComponent(filename)}` : null;
-    return NextResponse.json({ ok: true, evidenceId, uploadUrl }, { status: 200 });
-  } catch {
-    return NextResponse.json({ ok: false, error: "internal" }, { status: 200 });
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json({ error: "Missing BLOB_READ_WRITE_TOKEN" }, { status: 500 });
   }
+
+  const form = await req.formData();
+  const file = form.get("file") as File | null;
+  const vendor = (form.get("vendor") as string | null) ?? null;
+  if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
+
+  const bytes = await file.arrayBuffer();
+  const path = `evidence/${session.user.id}/${Date.now()}-${file.name}`;
+
+  const { url } = await put(path, new Blob([bytes]), {
+    access: "public",
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+    contentType: file.type || "application/octet-stream",
+  });
+
+  const rec = await prisma.evidence.create({
+    data: {
+      userId: (session.user as any).id,
+      vendor: vendor ?? undefined,
+      filename: file.name,
+      url,
+      size: file.size ? Number(file.size) : null,
+    },
+  });
+
+  return NextResponse.json({ ok: true, evidence: rec });
 }
 

@@ -1,4 +1,4 @@
-{
+﻿{
     "compilerOptions":  {
                             "target":  "ES2022",
                             "lib":  [
@@ -18,7 +18,7 @@
                             "baseUrl":  ".",
                             "paths":  {
                                           "@/*":  [
-                                                      "./*"
+                                                      "src/*"
                                                   ]
                                       },
                             "allowJs":  true,

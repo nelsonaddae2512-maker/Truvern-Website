@@ -1,7 +1,8 @@
-﻿export const runtime = "nodejs";
+import prisma from "@/lib/db";
+
+export const runtime = "nodejs"
 export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";import type { NextRequest } from "next/server";
 
 /**
  * GET: return a benign payload or echo a requested evidenceId if provided.

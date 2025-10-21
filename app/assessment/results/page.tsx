@@ -37,3 +37,4 @@ export default function ResultsPage() {
 }
 
 
+export const dynamic = "force-dynamic";

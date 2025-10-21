@@ -1,9 +1,11 @@
-﻿export default function NotFound(){
+﻿export default function NotFound() {
   return (
-    <main className="px-6 py-20 text-center">
-      <h1 className="text-3xl font-semibold mb-3">Page not found</h1>
-      <p className="text-neutral-600">Try the navigation above to find what you need.</p>
+    <main className="min-h-[60vh] grid place-items-center p-8 text-center">
+      <div>
+        <h1 className="text-4xl font-bold">404</h1>
+        <p className="mt-2 text-gray-600">We couldn’t find that page.</p>
+        <a className="mt-6 inline-block rounded-lg border px-4 py-2 hover:bg-gray-50" href="/">Back home</a>
+      </div>
     </main>
   );
 }
-

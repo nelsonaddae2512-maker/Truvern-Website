@@ -7,30 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  name      String?
-  createdAt DateTime   @default(now())
-  evidence  Evidence[]
-}
-
-model Evidence {
+model Organization {
   id        String   @id @default(cuid())
-  userId    String
+  name      String   @unique
+  domain    String?
+  plan      String   @default("free")
+  seats     Int      @default(3)
   createdAt DateTime @default(now())
-
-  // Fields used by app/api/evidence/upload/route.ts
-  vendor   String? // optional (line sets vendor ?? undefined)
-  filename String
-  url      String
-  size     Int?
-
-  data Json?
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@index([userId])
+  updatedAt DateTime @updatedAt
 }
 
 model AssessmentSubmission {
@@ -40,29 +24,42 @@ model AssessmentSubmission {
   answersJson  Json
   createdAt    DateTime @default(now())
 }
-
-model Organization {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  domain    String?
-  plan      String   @default("free")
-  seats     Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Usage     Usage[]
+model Evidence {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String?
+  description String?
+  vendor      String?
+  filename    String?
+  url         String?
+  size        Int?
+  note        String?     // <-- added
+  fileUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
-
 model Usage {
-  id             String   @id @default(cuid())
-  organizationId String
-  createdAt      DateTime @default(now())
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String?
+  action          String?
+  description     String?     // <-- added to match seed.ts
+  value           Int      @default(0)
+  meta            Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  // Optional analytics fields you might log
-  endpoint String?
-  tokens   Int?
-  meta     Json?
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-
-  @@index([organizationId, createdAt])
+  @@index([organizationId, createdAt(sort: Desc)])
+}
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  website     String?
+  logoUrl     String?
+  description String?    // used by seed.ts
+  category    String?    // used by seed.ts
+  trustScore  Int?       // used by seed.ts
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

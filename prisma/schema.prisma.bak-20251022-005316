@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Evidence {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  data      Json?
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model AssessmentSubmission {
+  id            String   @id @default(cuid())
+  companyName   String
+  contactEmail  String
+  answersJson   Json
+  createdAt     DateTime @default(now())
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  website     String?
+  logoUrl     String?
+  description String?
+  category    String?
+  trustScore  Int?     @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  plan      String   @default("free")
+  seats     Int      @default(1)
+  createdAt DateTime @default(now())
+}

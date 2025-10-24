@@ -1,4 +1,4 @@
-﻿import "./globals.css";
+﻿import './globals.css';
 import type { Metadata } from "next";
 import SiteNav from "../components/site/SiteNav";
 import Footer from "../components/site/Footer";
@@ -21,3 +21,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
+
+

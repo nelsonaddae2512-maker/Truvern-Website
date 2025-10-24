@@ -1,0 +1,47 @@
+﻿import VendorCard from '@/components/trust/VendorCard'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+async function fetchVendors(q?: string) {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  const qs = params.toString();
+  const url = '/api/vendors' + (qs ? ? : '');
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return { items: [] as any[] };
+  return res.json();
+})
+  if (!res.ok) return { items: [] }
+  return res.json()
+}
+
+export default async function VendorsPage({ searchParams }: { searchParams: { q?: string } }) {
+  const q = searchParams?.q
+  const { items } = await fetchVendors(q)
+
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">All Vendors</h1>
+        <form action="/vendors" className="ml-auto">
+          <input
+            name="q" defaultValue={q ?? ''} placeholder="Search vendors..."
+            className="rounded-xl border px-3 py-2 text-sm"
+          />
+        </form>
+      </div>
+
+      {(!items || items.length === 0) ? (
+        <div className="rounded-xl border bg-white p-8 text-center text-gray-600">
+          No vendors found.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((v: any) => (<VendorCard key={v.id} v={v} />))}
+        </div>
+      )}
+    </main>
+  )
+}
+

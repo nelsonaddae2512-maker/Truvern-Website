@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+﻿import prisma from "@/lib/db";
 
 import { NextResponse } from "next/server";import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -29,16 +29,24 @@ export async function POST(req: Request) {
     contentType: file.type || "application/octet-stream",
   });
 
-  const rec = await prisma.evidence.create({
-    data: {
-      userId: (session.user as any).id,
-      vendor: vendor ?? undefined,
-      filename: file.name,
-      url,
-      size: file.size ? Number(file.size) : null,
-    },
-  });
+  // put this BEFORE the create() call
+
+const rec = await prisma.evidence.create({
+  data: {
+    userId: (session.user as any).id
+  },
+});
+
 
   return NextResponse.json({ ok: true, evidence: rec });
 }
+
+
+
+
+
+
+
+
+
 

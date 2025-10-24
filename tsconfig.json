@@ -19,7 +19,13 @@
                             "paths":  {
                                           "@/*":  [
                                                       "src/*"
-                                                  ]
+                                                  ],
+                                          "@components/*":  [
+                                                                "components/*"
+                                                            ],
+                                          "@app/*":  [
+                                                         "app/*"
+                                                     ]
                                       },
                             "allowJs":  true,
                             "incremental":  true,

@@ -1,0 +1,21 @@
+'Log files:
+C:\Users\MR.NELSON\Downloads\truvern\.npm-cache\_logs\2025-10-23T03_19_35_756Z-debug-0.log
+
+# npm resolution error report
+
+While resolving: truvern@1.0.0
+Found: next@16.0.1-canary.0
+node_modules/next
+  next@"16.0.1-canary.0" from the root project
+
+Could not resolve dependency:
+peer next@"^12.2.5 || ^13 || ^14 || ^15" from next-auth@4.24.11
+node_modules/next-auth
+  next-auth@"^4.24.11" from the root project
+  peer next-auth@"^4" from @next-auth/prisma-adapter@1.0.7
+  node_modules/@next-auth/prisma-adapter
+    @next-auth/prisma-adapter@"^1.0.7" from the root project
+
+Fix the upstream dependency conflict, or retry
+this command with --force or --legacy-peer-deps
+to accept an incorrect (and potentially broken) dependency resolution.

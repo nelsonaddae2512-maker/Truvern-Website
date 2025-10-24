@@ -1,44 +1,21 @@
+﻿/** prisma/seed.cjs (CommonJS) */
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function main() {
-  const vendors = [
-    {
-      name: "Acme Compliance LLC",
-      website: "https://acme.example",
-      category: "Compliance",
-      country: "US",
-    },
-    {
-      name: "Nordic Trustworks",
-      website: "https://trustworks.example",
-      category: "Security",
-      country: "SE",
-    },
-    {
-      name: "Pearl Vendor Network",
-      website: "https://pearl.example",
-      category: "Procurement",
-      country: "SG",
-    },
-  ];
+  console.log("Seeding start...");
+  await prisma.$queryRaw`SELECT 1`;
+  console.log("DB connection OK.");
 
-  // Clear existing data first (optional)
-  await prisma.vendor.deleteMany();
+  // List available Prisma model delegates (the model names)
+  const delegates = Object.keys(prisma)
+    .filter(k => !k.startsWith("$") && typeof prisma[k] === "object");
+  console.log("Available Prisma delegates:", delegates);
 
-  // Insert all vendors in bulk
-  await prisma.vendor.createMany({
-    data: vendors,
-  });
-
-  console.log(`âœ… Seeded ${vendors.length} vendors.`);
+  // We'll insert data once we confirm the correct model name + fields.
+  console.log("Seed script finished (no writes yet).");
 }
 
 main()
-  .catch((e) => {
-    console.error("âŒ Error seeding:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .then(() => prisma.$disconnect())
+  .catch(async (e) => { console.error(e); await prisma.$disconnect(); process.exit(1); });

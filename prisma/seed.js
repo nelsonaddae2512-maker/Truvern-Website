@@ -1,36 +1,59 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-async function safe(upserter){
-  try{ return await upserter(); }catch(e){ console.log("seed note:", e.message); }
-}
-(async ()=>{
-  // Adjust names/fields to match your schema if needed
-  const org = await safe(()=>prisma.organization.upsert({
-    where: { name: "Demo Org" },
-    update: {},
-    create: { name: "Demo Org", plan: "pro", seats: 10 }
-  }));
 
-  const user = await safe(()=>prisma.user.upsert({
-    where: { email: "demo@demo.com" },
-    update: {},
-    create: { email: "demo@demo.com", name: "Demo User" }
-  }));
+async function main() {
+  const vendors = [
+    {
+      name: "AWS",
+      website: "https://aws.amazon.com",
+      logoUrl: "https://a0.awsstatic.com/libra-css/images/logos/aws_logo_smile_1200x630.png",
+      description: "Cloud infrastructure & services",
+      category: "cloud",
+      trustScore: 95,
+    },
+    {
+      name: "Google Cloud",
+      website: "https://cloud.google.com",
+      logoUrl: "https://cloud.google.com/_static/cloud/images/social-icon-google-cloud-1200-630.png",
+      description: "Cloud platform & services",
+      category: "cloud",
+      trustScore: 92,
+    },
+  ];
 
-  if (org && user) {
-    await safe(()=>prisma.membership.upsert({
-      where: { userId_organizationId: { userId: user.id, organizationId: org.id } },
-      update: {},
-      create: { userId: user.id, organizationId: org.id, role: "ADMIN" }
-    }));
+  for (const v of vendors) {
+    await prisma.vendor.upsert({
+      where: { name: v.name },
+      update: v,
+      create: v,
+    });
   }
 
-  await safe(()=>prisma.vendor.upsert({
-    where: { slug: "demo-vendor" },
-    update: {},
-    create: { name: "Demo Vendor", slug: "demo-vendor", ownerId: user?.id }
-  }));
+  const org = await prisma.organization.upsert({
+    where: { name: "Default Organization" },
+    update: { plan: "free", seats: 5 },
+    create: { name: "Default Organization", plan: "free", seats: 5 },
+  });
 
-  console.log("âœ… Seed complete");
-  await prisma.$disconnect();
-})();
+  await prisma.assessmentSubmission.createMany({
+    data: [
+      {
+        companyName: "Truvern Test Co",
+        contactEmail: "admin@truvern.test",
+        answersJson: { q1: "Yes", q2: "No", score: 7 },
+        createdAt: new Date(),
+      },
+    ],
+    skipDuplicates: true,
+  });
+
+  console.log("✅ Seed complete.");
+}
+
+main()
+  .then(async () => { await prisma.$disconnect(); })
+  .catch(async (e) => {
+    console.error("❌ Seed failed:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

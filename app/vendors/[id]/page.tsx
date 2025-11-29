@@ -149,12 +149,18 @@ export default async function VendorDetailPage({ params }: PageProps) {
                   </td>
                   <td className="px-4 py-2 text-right text-xs space-x-3">
                     {/* Download */}
-                    <Link
-                      href={`/api/evidence/${e.id}`}
-                      className="text-emerald-400 hover:underline"
-                    >
-                      Download
-                    </Link>
+                   {item.fileUrl ? (
+  <a
+    href={item.fileUrl}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-emerald-400 hover:underline"
+  >
+    Download
+  </a>
+) : (
+  <span className="text-slate-500 text-sm">No file</span>
+)}
 
                     {/* Delete */}
                     <EvidenceDeleteButton evidenceId={e.id} />

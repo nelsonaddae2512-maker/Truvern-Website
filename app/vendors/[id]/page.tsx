@@ -27,7 +27,7 @@ export default async function VendorDetailPage({ params }: PageProps) {
   let evidenceError: string | null = null;
 
   try {
-    // 🔑 NOTE: orderBy.createdAt instead of uploadedAt
+    // NOTE: orderBy.createdAt instead of uploadedAt
     vendor = await prisma.vendor.findUnique({
       where: { id },
       include: {
@@ -133,11 +133,11 @@ export default async function VendorDetailPage({ params }: PageProps) {
                 >
                   <td className="px-4 py-2">
                     <span className="text-emerald-400">
-                      {e.fileName ?? e.filename ?? "Untitled file"}
+                      {e.fileName ?? e.filename ?? e.title ?? "Untitled file"}
                     </span>
                   </td>
                   <td className="px-4 py-2 max-w-xs text-xs text-slate-300">
-                    {e.notes || "—"}
+                    {e.description || e.notes || "—"}
                   </td>
                   <td className="px-4 py-2 text-right text-xs text-slate-400">
                     {formatSize(e.size)}
@@ -149,18 +149,18 @@ export default async function VendorDetailPage({ params }: PageProps) {
                   </td>
                   <td className="px-4 py-2 text-right text-xs space-x-3">
                     {/* Download */}
-                   {item.fileUrl ? (
-  <a
-    href={item.fileUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-emerald-400 hover:underline"
-  >
-    Download
-  </a>
-) : (
-  <span className="text-slate-500 text-sm">No file</span>
-)}
+                    {e.fileUrl ? (
+                      <a
+                        href={e.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 hover:underline"
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <span className="text-slate-500 text-sm">No file</span>
+                    )}
 
                     {/* Delete */}
                     <EvidenceDeleteButton evidenceId={e.id} />

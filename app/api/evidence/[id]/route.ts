@@ -1,67 +1,44 @@
 // app/api/evidence/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
-
-// Optional: GET single evidence (handy for debugging)
-export async function GET(_req: Request, { params }: RouteContext) {
-  const id = Number(params.id);
-  if (!Number.isInteger(id)) {
-    return NextResponse.json({ error: "Invalid evidence id" }, { status: 400 });
-  }
-
-  try {
-    const evidence = await prisma.evidence.findUnique({
-      where: { id },
-    });
-
-    if (!evidence) {
-      return NextResponse.json({ error: "Evidence not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ evidence });
-  } catch (err) {
-    console.error("[/api/evidence/[id]] GET error:", err);
-    return NextResponse.json(
-      { error: "Failed to load evidence" },
-      { status: 500 }
-    );
-  }
+interface RouteParams {
+  params: { id: string };
 }
 
-// DELETE /api/evidence/:id
-export async function DELETE(_req: Request, { params }: RouteContext) {
+// GET /api/evidence/:id
+// - If the request is a browser navigation (text/html), redirect to fileUrl
+// - If the request asks for JSON (application/json), return the evidence JSON
+export async function GET(req: NextRequest, { params }: RouteParams) {
   const id = Number(params.id);
-  if (!Number.isInteger(id)) {
+
+  if (!Number.isFinite(id)) {
     return NextResponse.json({ error: "Invalid evidence id" }, { status: 400 });
   }
 
-  try {
-    // Ensure it exists so we can return a useful 404
-    const existing = await prisma.evidence.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+  const evidence = await prisma.evidence.findUnique({
+    where: { id },
+  });
 
-    if (!existing) {
-      return NextResponse.json({ error: "Evidence not found" }, { status: 404 });
-    }
-
-    await prisma.evidence.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    console.error("[/api/evidence/[id]] DELETE error:", err);
+  if (!evidence) {
     return NextResponse.json(
-      { error: "Failed to delete evidence" },
-      { status: 500 }
+      { error: "Evidence not found" },
+      { status: 404 }
     );
   }
+
+  const accept = req.headers.get("accept") || "";
+
+  // If this is a programmatic fetch asking for JSON, return JSON.
+  if (accept.includes("application/json")) {
+    return NextResponse.json({ evidence });
+  }
+
+  // Otherwise (browser navigation / link click), redirect to the fileUrl if present.
+  if (evidence.fileUrl) {
+    return NextResponse.redirect(evidence.fileUrl, { status: 302 });
+  }
+
+  // Fallback: no file URL – just show JSON detail.
+  return NextResponse.json({ evidence });
 }

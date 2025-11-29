@@ -1,0 +1,77 @@
+﻿{
+    "Phase":  "Phase140-GoLive-Checklist",
+    "Timestamp":  "2025-11-11T22:28:56",
+    "Base":  "https://truvern.com",
+    "Results":  [
+                    {
+                        "Url":  "https://truvern.com/",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  459,
+                        "Length":  9665,
+                        "Snippet":  "\u003c!DOCTYPE html\u003e\u003c!--Tj3uHbyjcmmvsHk3yxoVc--\u003e\u003chtml lang=\"en\"\u003e\u003chead\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta name=\"viewport\" content=\"width=de"
+                    },
+                    {
+                        "Url":  "https://truvern.com/api/health",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  1108,
+                        "Length":  2,
+                        "Snippet":  "ok"
+                    },
+                    {
+                        "Url":  "https://truvern.com/trust-network",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  1066,
+                        "Length":  7002,
+                        "Snippet":  "\u003c!DOCTYPE html\u003e\u003chtml lang=\"en\"\u003e\u003chead\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta name=\"viewport\" content=\"width=device-width, initial-scale=1\""
+                    },
+                    {
+                        "Url":  "https://truvern.com/reports/board",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  214,
+                        "Length":  7280,
+                        "Snippet":  "\u003c!DOCTYPE html\u003e\u003chtml lang=\"en\"\u003e\u003chead\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta name=\"viewport\" content=\"width=device-width, initial-scale=1\""
+                    },
+                    {
+                        "Url":  "https://truvern.com/vendors",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  176,
+                        "Length":  6821,
+                        "Snippet":  "\u003c!DOCTYPE html\u003e\u003chtml lang=\"en\"\u003e\u003chead\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta charSet=\"utf-8\"/\u003e\u003cmeta name=\"viewport\" content=\"width=device-width, initial-scale=1\""
+                    },
+                    {
+                        "Url":  "https://truvern.com/favicon.ico",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  183,
+                        "Error":  "Method invocation failed because [System.Byte] does not contain a method named \u0027Substring\u0027."
+                    },
+                    {
+                        "Url":  "https://truvern.com/sitemap.xml",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  245,
+                        "Length":  721,
+                        "Snippet":  "\u003c?xml version=\"1.0\" encoding=\"UTF-8\"?\u003e\n\u003curlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\u003e\n\u003curl\u003e\n\u003cloc\u003ehttps://truvern.com \r\n/\u003c/loc\u003e\n\u003clastmod\u003e"
+                    },
+                    {
+                        "Url":  "https://truvern.com/robots.txt",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  217,
+                        "Length":  65,
+                        "Snippet":  "User-Agent: *\nAllow: /\n\nSitemap: https://truvern.com/sitemap.xml"
+                    },
+                    {
+                        "Url":  "https://truvern.com/opengraph-image.png",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  200,
+                        "Error":  "Method invocation failed because [System.Byte] does not contain a method named \u0027Substring\u0027."
+                    }
+                ]
+}

@@ -1,0 +1,14 @@
+﻿import { ensureArray } from '@/app/lib/safe';
+// app/dashboard/buyer/page.tsx
+import React from "react";
+
+export default function BuyerDashboardPage() {
+  return (
+    <div>
+      <h1>Buyer Dashboard</h1>
+      <p>Buyer analytics and activity overview will appear here.</p>
+    </div>
+  );
+}
+
+

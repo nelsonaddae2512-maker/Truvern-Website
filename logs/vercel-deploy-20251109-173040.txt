@@ -1,0 +1,7 @@
+Vercel CLI 48.9.0
+Retrieving project…
+Deploying nelson-addaes-projects/truvern
+Uploading [--------------------] (0.0B/319B)
+Uploading [=========-----------] (144.0B/319B)
+Uploading [====================] (319.0B/319B)
+^C

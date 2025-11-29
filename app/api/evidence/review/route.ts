@@ -1,4 +1,4 @@
-import prisma from "@/lib/db";
+﻿import prisma from "@/lib/db";
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic";
@@ -41,4 +41,3 @@ export async function GET(){ const { getServerSession } = await import("next-aut
     return NextResponse.json({ items: [], error: "internal" }, { status: 200 });
   }
 }
-

@@ -1,4 +1,5 @@
-﻿
+﻿import { ensureArray } from '@/app/lib/safe';
+
 import React from 'react';
 import Link from 'next/link';
 
@@ -18,7 +19,7 @@ export default function Dashboard(){
         </div>
         <div className="border rounded p-4">
           <h2 className="text-xl font-semibold">Buyer workspace</h2>
-          <p className="text-slate-600">Find preâ€‘assessed vendors. Request full security package.</p>
+          <p className="text-slate-600">Find preÃ¢â‚¬â€˜assessed vendors. Request full security package.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link className="h-9 px-3 rounded border" href="/trust">Browse directory</Link>
             <Link className="h-9 px-3 rounded border" href="/contact">Contact a vendor</Link>
@@ -28,6 +29,8 @@ export default function Dashboard(){
     </div>
   );
 }
+
+
 
 
 

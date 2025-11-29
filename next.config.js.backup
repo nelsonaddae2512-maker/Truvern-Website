@@ -1,0 +1,12 @@
+﻿// Auto-generated during Phase122u
+// This disables type checking and ESLint during builds
+const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+};
+
+module.exports = nextConfig;

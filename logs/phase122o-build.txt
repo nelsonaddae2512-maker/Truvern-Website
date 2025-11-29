@@ -1,0 +1,23 @@
+﻿
+> truvern@1.0.0 prebuild C:\Users\MR.NELSON\Downloads\truvern
+> prisma generate
+
+[2mPrisma schema loaded from prisma\schema.prisma[22m
+
+Γ£ö Generated [1mPrisma Client[22m (v6.19.0)[2m to .\node_modules\.pnpm\@prisma+client@6.19.0_prism_0ade0c2032e7f19289902b884120cfab\node_modules\@prisma\client[22m in 235ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+
+
+> truvern@1.0.0 build C:\Users\MR.NELSON\Downloads\truvern
+> next build
+
+   [1m[38;2;173;127;168mΓû▓ Next.js 15.5.6[39m[22m
+   - Environments: .env.production.local, .env.local, .env
+
+ [37m[1m [22m[39m Creating an optimized production build ...
+ [32m[1mΓ£ô[22m[39m Compiled successfully in 29.1s
+ [37m[1m [22m[39m Linting and checking validity of types ...
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

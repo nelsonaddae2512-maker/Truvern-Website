@@ -1,4 +1,5 @@
-﻿export const dynamic = "force-dynamic";
+﻿import { ensureArray } from '@/app/lib/safe';
+export const dynamic = "force-dynamic";
 
 export default function BillingPage() {
   return (
@@ -8,3 +9,4 @@ export default function BillingPage() {
     </main>
   );
 }
+

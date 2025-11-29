@@ -1,0 +1,93 @@
+﻿{
+    "Phase":  "Phase142-SEO-Tags-Verify-Safe",
+    "Base":  "https://truvern.com",
+    "Timestamp":  "2025-11-11T22:58:00",
+    "Pages":  [
+                  {
+                      "Path":  "/",
+                      "Status":  200,
+                      "OK":  true,
+                      "TookMs":  379,
+                      "Title":  "Truvern — Vendor Trust Network",
+                      "TitleLen":  30,
+                      "TitleOK":  true,
+                      "Desc":  "Third-Party Risk Management (TPRM) and vendor trust network.",
+                      "DescLen":  60,
+                      "DescOK":  true,
+                      "OGTitle":  "",
+                      "OGDescription":  "",
+                      "OGImage":  "",
+                      "OGStatus":  0,
+                      "Canonical":  "",
+                      "CanonOK":  false
+                  },
+                  {
+                      "Path":  "/trust-network",
+                      "Status":  200,
+                      "OK":  true,
+                      "TookMs":  1114,
+                      "Title":  "Truvern — Vendor Trust Network",
+                      "TitleLen":  30,
+                      "TitleOK":  true,
+                      "Desc":  "Third-Party Risk Management (TPRM) and vendor trust network.",
+                      "DescLen":  60,
+                      "DescOK":  true,
+                      "OGTitle":  "",
+                      "OGDescription":  "",
+                      "OGImage":  "",
+                      "OGStatus":  0,
+                      "Canonical":  "",
+                      "CanonOK":  false
+                  },
+                  {
+                      "Path":  "/reports/board",
+                      "Status":  200,
+                      "OK":  true,
+                      "TookMs":  189,
+                      "Title":  "Truvern — Vendor Trust Network",
+                      "TitleLen":  30,
+                      "TitleOK":  true,
+                      "Desc":  "Third-Party Risk Management (TPRM) and vendor trust network.",
+                      "DescLen":  60,
+                      "DescOK":  true,
+                      "OGTitle":  "",
+                      "OGDescription":  "",
+                      "OGImage":  "",
+                      "OGStatus":  0,
+                      "Canonical":  "",
+                      "CanonOK":  false
+                  },
+                  {
+                      "Path":  "/vendors",
+                      "Status":  200,
+                      "OK":  true,
+                      "TookMs":  186,
+                      "Title":  "Truvern — Vendor Trust Network",
+                      "TitleLen":  30,
+                      "TitleOK":  true,
+                      "Desc":  "Third-Party Risk Management (TPRM) and vendor trust network.",
+                      "DescLen":  60,
+                      "DescOK":  true,
+                      "OGTitle":  "",
+                      "OGDescription":  "",
+                      "OGImage":  "",
+                      "OGStatus":  0,
+                      "Canonical":  "",
+                      "CanonOK":  false
+                  }
+              ],
+    "Extras":  [
+                   {
+                       "Path":  "/sitemap.xml",
+                       "Status":  200,
+                       "OK":  true,
+                       "TookMs":  54
+                   },
+                   {
+                       "Path":  "/robots.txt",
+                       "Status":  200,
+                       "OK":  true,
+                       "TookMs":  86
+                   }
+               ]
+}

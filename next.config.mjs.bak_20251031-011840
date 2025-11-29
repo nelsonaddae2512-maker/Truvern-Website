@@ -1,0 +1,15 @@
+import { withSentryConfig } from '@sentry/nextjs';
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true,
+  experimental: {
+    typedRoutes: false,              // disables route type generation
+    serverActions: { bodySizeLimit: '2mb' }, // safe default
+  },
+  typescript: {
+    ignoreBuildErrors: true,         // prevents TS errors from halting builds
+  },
+}
+
+export default withSentryConfig(nextConfig, { disableClientWebpackPlugin: true, disableServerWebpackPlugin: true });

@@ -1,4 +1,5 @@
-﻿export default function AssessmentPage() {
+﻿import { ensureArray } from '@/app/lib/safe';
+export default function AssessmentPage() {
   return (
     <main className='max-w-3xl mx-auto p-6'>
       <h1 className='text-2xl font-semibold mb-4'>Third-Party Risk Assessment</h1>
@@ -12,5 +13,7 @@
     </main>
   )
 }
+
+
 
 

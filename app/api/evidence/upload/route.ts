@@ -1,52 +1,82 @@
-﻿import prisma from "@/lib/db";
-
-import { NextResponse } from "next/server";import type { Session } from "next-auth";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../src/lib/auth";
-import { put } from "@vercel/blob"
-export const runtime = "nodejs"; // required for file uploads
+// app/api/evidence/upload/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
-  type SessionWithId = Session & { user: { id: string } }; const session = (await getServerSession(authOptions)) as SessionWithId | null;
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const body = await req.json().catch(() => null);
+
+    if (!body) {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
+    const {
+      vendorId,
+      title,
+      description,
+      fileUrl,
+      uploadedBy,
+    }: {
+      vendorId?: number | string;
+      title?: string;
+      description?: string;
+      fileUrl?: string;
+      uploadedBy?: string;
+    } = body;
+
+    // Basic validation
+    const idNum =
+      typeof vendorId === "string"
+        ? parseInt(vendorId, 10)
+        : typeof vendorId === "number"
+        ? vendorId
+        : NaN;
+
+    if (!Number.isInteger(idNum)) {
+      return NextResponse.json(
+        { error: "Missing or invalid vendorId" },
+        { status: 400 }
+      );
+    }
+
+    if (!title || !title.trim()) {
+      return NextResponse.json(
+        { error: "Title is required" },
+        { status: 400 }
+      );
+    }
+
+    // Optional: simple URL sanity check
+    const normalizedFileUrl =
+      typeof fileUrl === "string" && fileUrl.trim().length > 0
+        ? fileUrl.trim()
+        : null;
+
+    const evidence = await prisma.evidence.create({
+      data: {
+        vendorId: idNum,
+        title: title.trim(),
+        description: description?.trim() || null,
+        fileUrl: normalizedFileUrl,
+        fileName: normalizedFileUrl || null,
+        contentType: null,
+        size: null,
+        uploadedBy: uploadedBy?.trim() || "Console user",
+        // createdAt is handled by @default(now()) in Prisma
+      },
+    });
+
+    return NextResponse.json({ success: true, evidence }, { status: 201 });
+  } catch (err) {
+    console.error("[/api/evidence/upload] ERROR:", err);
+    return NextResponse.json(
+      {
+        error: "Failed to create evidence entry",
+      },
+      { status: 500 }
+    );
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return NextResponse.json({ error: "Missing BLOB_READ_WRITE_TOKEN" }, { status: 500 });
-  }
-
-  const form = await req.formData();
-  const file = form.get("file") as File | null;
-  const vendor = (form.get("vendor") as string | null) ?? null;
-  if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
-
-  const bytes = await file.arrayBuffer();
-  const path = `evidence/${session.user.id}/${Date.now()}-${file.name}`;
-
-  const { url } = await put(path, new Blob([bytes]), {
-    access: "public",
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-    contentType: file.type || "application/octet-stream",
-  });
-
-  // put this BEFORE the create() call
-
-const rec = await prisma.evidence.create({
-  data: {
-    userId: (session.user as any).id
-  },
-});
-
-
-  return NextResponse.json({ ok: true, evidence: rec });
 }
-
-
-
-
-
-
-
-
-
-

@@ -1,0 +1,114 @@
+name: Truvern • Prod CI & Deploy (Vercel + Health Gates)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20.x"
+  PNPM_VERSION: "9"
+  PROD_URL: https://truvern.com
+  HEALTH_PATHS: |
+    /ops/health
+    /api/health
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma validate
+        run: pnpm dlx prisma validate --schema=./prisma/schema.prisma
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Vercel pull (prod env)
+        run: vercel pull --yes --environment=production --token $VERCEL_TOKEN
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Vercel build (prebuild)
+        run: vercel build --prod --token $VERCEL_TOKEN
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Vercel deploy (prebuilt → prod)
+        id: vercel
+        run: |
+          URL=$(vercel deploy --prebuilt --prod --token $VERCEL_TOKEN)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployed: $URL"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Health check (canonical)
+        run: |
+          set -e
+          base="${{ env.PROD_URL }}"
+          while read -r p; do
+            [ -z "$p" ] && continue
+            url="$base$p"
+            echo "Checking $url"
+            for i in 1 2 3 4 5; do
+              code=$(curl -sS -o /dev/null -w "%{http_code}" "$url" || true)
+              echo "Attempt $i: $code"
+              if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then ok=1; break; fi
+              sleep 5
+            done
+            if [ "${ok:-0}" != "1" ]; then
+              echo "::error ::Health check failed for $url"
+              exit 2
+            fi
+            unset ok
+          done <<'EOF'
+          ${{ env.HEALTH_PATHS }}
+          EOF
+
+      - name: Health check (fresh deployment URL)
+        run: |
+          set -e
+          base="${{ steps.vercel.outputs.url }}"
+          while read -r p; do
+            [ -z "$p" ] && continue
+            url="$base$p"
+            echo "Checking $url"
+            for i in 1 2 3 4 5; do
+              code=$(curl -sS -o /dev/null -w "%{http_code}" "$url" || true)
+              echo "Attempt $i: $code"
+              if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then ok=1; break; fi
+              sleep 5
+            done
+            if [ "${ok:-0}" != "1" ]; then
+              echo "::error ::Health check failed for $url"
+              exit 2
+            fi
+            unset ok
+          done <<'EOF'
+          ${{ env.HEALTH_PATHS }}
+          EOF

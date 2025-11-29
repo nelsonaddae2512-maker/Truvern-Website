@@ -1,0 +1,33 @@
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting seed...');
+
+  const vendors = [
+    // Example placeholder data (adjust to your schema)
+    { name: 'Default Vendor', riskScore: 42 },
+  ];
+
+  for (const v of vendors) {
+    await prisma.vendor.upsert({
+      where: { name: v.name },
+      update: {},
+      create: v,
+    });
+  }
+
+  console.log('✅ Seeding completed successfully.');
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error('❌ Seed failed:', e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

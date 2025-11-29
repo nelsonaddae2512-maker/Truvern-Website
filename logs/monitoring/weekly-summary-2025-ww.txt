@@ -1,0 +1,12 @@
+﻿Truvern Uptime — Weekly Roll-Up
+Generated : 2025-10-29 22:30:51
+Window    : 2025-10-22 22:30:51 .. 2025-10-29 22:30:51
+
+Overall   : checks=2  passed=2  failed=0  uptime=100%  est_downtime=0m
+
+Per-day:
+  Day         Checks  Passed  Failed  Uptime%   EstDown(m)
+  2025-10-29       2       2       0      100            0
+
+Top errors:
+  (no errors recorded)

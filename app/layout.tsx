@@ -1,26 +1,36 @@
-﻿import './globals.css';
+﻿import "./globals.css";
 import type { Metadata } from "next";
-import SiteNav from "../components/site/SiteNav";
-import Footer from "../components/site/Footer";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Head from "next/head";
 
 export const metadata: Metadata = {
-  title: { default: "Truvern", template: "%s • Truvern" },
-  description: "Truvern helps teams assess, compare, and continuously monitor third-party vendors.",
-  icons: { icon: "/favicon.svg", apple: "/favicon.svg" },
-  openGraph: { title: "Truvern", description: "Assess, compare, and monitor third-party vendors." }
+  metadataBase: new URL("https://truvern.com"),
+  title: { default: "Truvern", template: "%s | Truvern" },
+  description: "Truvern — Vendor trust network and TPRM platform.",
+  openGraph: {
+    title: "Truvern",
+    description: "Vendor trust network and TPRM platform.",
+    url: "https://truvern.com",
+    images: ["/opengraph-image.png"],
+    siteName: "Truvern",
+  },
+  icons: { icon: "/favicon.ico" },
+  alternates: { canonical: "https://truvern.com" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <SiteNav />
+      <Head>
+        <meta property="og:image" content="/opengraph-image.png" />
+        <link rel="canonical" href="https://truvern.com" />
+      </Head>
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        <Navbar />
         {children}
         <Footer />
       </body>
     </html>
   );
 }
-
-
-

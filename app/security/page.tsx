@@ -1,4 +1,5 @@
-﻿export const dynamic = "force-static";
+﻿import { ensureArray } from '@/app/lib/safe';
+export const dynamic = "force-static";
 
 export const metadata = {
   title: "Security â€¢ Truvern",

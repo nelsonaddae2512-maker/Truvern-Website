@@ -1,0 +1,40 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251031170507
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 13092
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+=== Phase22-Rev2: Smart Auto-Fix + Log Analyzer ===
+[0] Project root: C:\Users\MR.NELSON\Downloads\truvern
+    Logs: C:\Users\MR.NELSON\Downloads\truvern\logs\phase22r2
+⚠ Killing lingering vercel/node/npm...
+🧹 Cleaning caches: .next, .vercel, node_modules\.cache ...
+✅ Vercel CLI: 48.8.0
+PS>TerminatingError(vercel.cmd): "The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: Vercel CLI 48.8.0"
+>> TerminatingError(): "Vercel authentication failed. Vercel CLI 48.8.0"
+
+‼ Unhandled error: Vercel authentication failed. Vercel CLI 48.8.0
+Vercel authentication failed. Vercel CLI 48.8.0
+At line:81 char:5
++     throw "Vercel authentication failed. $_"
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Vercel authenti...rcel CLI 48.8.0:String) [], Ru 
+   ntimeException
+    + FullyQualifiedErrorId : Vercel authentication failed. Vercel CLI 48.8.0
+**********************
+Windows PowerShell transcript end
+End time: 20251031170512
+**********************

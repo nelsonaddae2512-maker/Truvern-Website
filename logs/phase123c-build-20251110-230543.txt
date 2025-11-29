@@ -1,0 +1,227 @@
+
+> truvern@1.0.0 prebuild C:\Users\MR.NELSON\Downloads\truvern
+> prisma generate
+
+[2mPrisma schema loaded from prisma\schema.prisma[22m
+
+✔ Generated [1mPrisma Client[22m (v6.19.0)[2m to .\node_modules\@prisma\client[22m in 175ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+
+
+> truvern@1.0.0 build C:\Users\MR.NELSON\Downloads\truvern
+> next build
+
+   [1m[38;2;173;127;168m▲ Next.js 15.5.6[39m[22m
+   - Environments: .env.production.local, .env.local, .env
+   - Experiments (use with caution):
+     [1m✓[22m typedRoutes
+     [1m✓[22m serverActions
+
+ [37m[1m [22m[39m Creating an optimized production build ...
+ [32m[1m✓[22m[39m Compiled successfully in 15.1s
+ [37m[1m [22m[39m Skipping validation of types
+ [37m[1m [22m[39m Skipping linting
+ [37m[1m [22m[39m Collecting page data ...
+ [37m[1m [22m[39m Generating static pages (0/57) ...
+ [37m[1m [22m[39m Generating static pages (14/57) 
+ [37m[1m [22m[39m Generating static pages (28/57) 
+ [37m[1m [22m[39m Generating static pages (42/57) 
+ [32m[1m✓[22m[39m Generating static pages (57/57)
+ [37m[1m [22m[39m Finalizing page optimization ...
+ [37m[1m [22m[39m Collecting build traces ...
+
+[4mRoute (app)[24m                                 [4mSize[24m  [4mFirst Load JS[24m  [4m[24m  [4m[24m
+┌ ○ /                                      355 B         [37m[1m102 kB[22m[39m
+├ ○ /_not-found                            355 B         [37m[1m102 kB[22m[39m
+├ ƒ /about                                 355 B         [37m[1m102 kB[22m[39m
+├ ƒ /account/billing                       355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api                                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/assessment                        355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/assessment/results                355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/assessment/submit                 355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/auth                              355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/auth/[...nextauth]                355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/billing                           355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/billing/summary                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/board                             355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/contact                           355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/dashboard                         355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/diag                              355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/evidence                          355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/evidence/get-url                  355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/evidence/list                     355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/evidence/presign                  355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/evidence/review                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/evidence/upload                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/health                            355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/invite                            355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/invite/[token]                    355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/invites                           355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/invites/create                    355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/observe-ping                      355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/plan                              355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/reports/board                     355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/sso                               355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/sso/logout                        355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/sso/saml                          355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/sso/saml/acs                      355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/sso/saml/metadata                 355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/stripe                            355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/stripe/checkout                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/stripe/portal                     355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/stripe/webhook                    355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/trust                             355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/trust-network                     355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/trust/[slug]                      355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/trust/badge                       355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/trust/list                        355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/trust/toggle                      355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/usage                             355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/usage/summary                     355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/usage/track                       355 B         [37m[1m102 kB[22m[39m
+├ ƒ /api/vendors                           355 B         [37m[1m102 kB[22m[39m
+├ ○ /assessment                            355 B         [37m[1m102 kB[22m[39m
+├ ƒ /assessment/results                    355 B         [37m[1m102 kB[22m[39m
+├ ○ /blog                                  355 B         [37m[1m102 kB[22m[39m
+├ ○ /buyers                                355 B         [37m[1m102 kB[22m[39m
+├ ○ /compare                               355 B         [37m[1m102 kB[22m[39m
+├ ƒ /contact                               355 B         [37m[1m102 kB[22m[39m
+├ ○ /dashboard                           3.46 kB         [37m[1m105 kB[22m[39m
+├ ƒ /dashboard/admin                       355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/admin/api                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/billing                     355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/buyer                       355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/buyer/api                   355 B         [37m[1m102 kB[22m[39m
+├ ○ /dashboard/evidence                    355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/review                      355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/trust                       355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/trust/api                   355 B         [37m[1m102 kB[22m[39m
+├ ○ /dashboard/vendor                      355 B         [37m[1m102 kB[22m[39m
+├ ƒ /dashboard/vendor/api                  355 B         [37m[1m102 kB[22m[39m
+├ ○ /directory                             355 B         [37m[1m102 kB[22m[39m
+├ ○ /docs                                  355 B         [37m[1m102 kB[22m[39m
+├ ○ /features                              355 B         [37m[1m102 kB[22m[39m
+├ ƒ /invite/[token]                        355 B         [37m[1m102 kB[22m[39m
+├ ○ /legal/privacy                         355 B         [37m[1m102 kB[22m[39m
+├ ƒ /legal/terms                           355 B         [37m[1m102 kB[22m[39m
+├ ƒ /login                                 355 B         [37m[1m102 kB[22m[39m
+├ ○ /manifest.webmanifest                    0 B            [37m[1m0 B[22m[39m
+├ ƒ /ops/health                            355 B         [37m[1m102 kB[22m[39m
+├ ƒ /pricing                               355 B         [37m[1m102 kB[22m[39m
+├ ƒ /reports                               355 B         [37m[1m102 kB[22m[39m
+├ ƒ /reports/board                         355 B         [37m[1m102 kB[22m[39m
+├ ƒ /reports/board/preview                 355 B         [37m[1m102 kB[22m[39m
+├ ○ /robots.txt                            355 B         [37m[1m102 kB[22m[39m
+├ ○ /security                              355 B         [37m[1m102 kB[22m[39m
+├ ○ /sitemap.xml                           355 B         [37m[1m102 kB[22m[39m
+├ ○ /sso                                   355 B         [37m[1m102 kB[22m[39m
+├ ƒ /subscribe                             355 B         [37m[1m102 kB[22m[39m
+├ ƒ /trust                                 355 B         [37m[1m102 kB[22m[39m
+├ ƒ /trust-network                         355 B         [37m[1m102 kB[22m[39m
+├ ƒ /trust-network.__bak__                 355 B         [37m[1m102 kB[22m[39m
+├ ƒ /trust/[slug]                          355 B         [37m[1m102 kB[22m[39m
+├ ƒ /trust/embed                           355 B         [37m[1m102 kB[22m[39m
+├ ƒ /upgrade                               355 B         [37m[1m102 kB[22m[39m
+├ ƒ /vendor/upload                         355 B         [37m[1m102 kB[22m[39m
+├ ƒ /vendor/upload-file                    355 B         [37m[1m102 kB[22m[39m
+├ ƒ /vendors                               355 B         [37m[1m102 kB[22m[39m
+└ ƒ /vendors/[id]                        1.01 kB         [37m[1m103 kB[22m[39m
++ First Load JS shared by all             [37m[1m102 kB[22m[39m
+  ├ chunks/1255-64d514cdae386b7c.js      45.7 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js  54.2 kB
+  └ other shared chunks (total)          1.97 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[2mEnvironment variables loaded from .env[22m
+ [33m[1m⚠[22m[39m Invalid next.config.js options detected: 
+ [33m[1m⚠[22m[39m     Expected object, received boolean at "experimental.serverActions"
+ [33m[1m⚠[22m[39m See more info here: https://nextjs.org/docs/messages/invalid-next-config
+ [33m[1m⚠[22m[39m `experimental.typedRoutes` has been moved to `typedRoutes`. Please update your next.config.js file accordingly.
+ [33m[1m⚠[22m[39m Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\MR.NELSON\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\MR.NELSON\Downloads\truvern\pnpm-lock.yaml
+
+ [33m[1m⚠[22m[39m Compiled with warnings in 12.4s
+
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@prisma/instrumentation/dist/index.js
+./node_modules/@sentry/node/build/cjs/integrations/tracing/prisma.js
+./node_modules/@sentry/node/build/cjs/index.js
+./node_modules/@sentry/nextjs/build/cjs/index.server.js
+./sentry.server.config.ts
+
+./app/api/observe-ping/route.ts
+Attempted import error: 'log' is not exported from '@/app/lib/logger' (imported as 'log').
+
+Import trace for requested module:
+./app/api/observe-ping/route.ts
+
+./app/trust-network.__bak__/page.tsx
+Attempted import error: 'getVendorsSafe' is not exported from '@/app/lib/safe' (imported as 'getVendorsSafe').
+
+Import trace for requested module:
+./app/trust-network.__bak__/page.tsx
+
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumentation.js
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@prisma/instrumentation/node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@prisma/instrumentation/dist/index.js
+./node_modules/@sentry/node/build/cjs/integrations/tracing/prisma.js
+./node_modules/@sentry/node/build/cjs/index.js
+./node_modules/@sentry/nextjs/build/cjs/index.server.js
+./app/lib/logger.ts
+./app/api/observe-ping/route.ts
+
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /assessment/results. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /_not-found. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /assessment. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /dashboard. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /features. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /sso. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /buyers. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /blog. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /compare. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /dashboard/evidence. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /directory. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /dashboard/vendor. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /docs. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /legal/privacy. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ [33m[1m⚠[22m[39m Unsupported metadata themeColor is configured in metadata export in /security. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport

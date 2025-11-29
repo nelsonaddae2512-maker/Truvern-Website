@@ -1,0 +1,57 @@
+﻿import Link from "next/link";
+
+export const dynamic = "force-static";
+
+export default function TrustNetworkPage() {
+  return (
+    <main className="min-h-screen bg-slate-950 text-slate-50">
+      <section className="max-w-5xl mx-auto px-4 py-16 space-y-8">
+        <header className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-sky-400">
+            Truvern Trust Network
+          </p>
+          <h1 className="text-2xl md:text-3xl font-semibold">
+            A shared source of truth for third-party risk.
+          </h1>
+          <p className="text-sm md:text-base text-slate-300 max-w-2xl">
+            The Trust Network lets customers and vendors meet in the middle:
+            reusable assessments, shared evidence, and live health indicators
+            for every relationship.
+          </p>
+        </header>
+
+        <div className="grid gap-4 md:grid-cols-2 text-xs md:text-sm text-slate-300">
+          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
+            <p className="font-medium text-slate-100">For customers</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>Search the network for existing vendor profiles.</li>
+              <li>Re-use completed assessments instead of starting from scratch.</li>
+              <li>Track open risks and remediation plans in one view.</li>
+            </ul>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
+            <p className="font-medium text-slate-100">For vendors</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>Maintain a single, always-current security profile.</li>
+              <li>Answer once, share with many customers.</li>
+              <li>Publish attestations, certifications, and evidence on your terms.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-xs md:text-sm">
+          <Link
+            href="/vendors"
+            className="inline-flex items-center rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 transition"
+          >
+            Go to vendor workspace
+          </Link>
+          <span className="text-slate-400">
+            Looking for the old placeholder? It has been replaced by this
+            Trust Network overview.
+          </span>
+        </div>
+      </section>
+    </main>
+  );
+}

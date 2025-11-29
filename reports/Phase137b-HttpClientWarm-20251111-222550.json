@@ -1,0 +1,55 @@
+﻿{
+    "Phase":  "Phase137b-HttpClientWarm",
+    "Base":  "https://truvern.com",
+    "Timestamp":  "2025-11-11T22:25:51",
+    "Results":  [
+                    {
+                        "Url":  "https://truvern.com/\u0026v=15da17e285b24d588ac76f5e56abea46",
+                        "Endpoint":  "/",
+                        "Status":  404,
+                        "OK":  false,
+                        "TookMs":  47,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:25:50"
+                    },
+                    {
+                        "Url":  "https://truvern.com/api/health\u0026v=d6d79464201b446e9198e05a248543ea",
+                        "Endpoint":  "/api/health",
+                        "Status":  404,
+                        "OK":  false,
+                        "TookMs":  41,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:25:50"
+                    },
+                    {
+                        "Url":  "https://truvern.com/trust-network\u0026v=0413beb6129246b2ad3044f300839ca8",
+                        "Endpoint":  "/trust-network",
+                        "Status":  404,
+                        "OK":  false,
+                        "TookMs":  44,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:25:50"
+                    },
+                    {
+                        "Url":  "https://truvern.com/reports/board\u0026v=b3f16035cc6f4282bbd06aedf76d587a",
+                        "Endpoint":  "/reports/board",
+                        "Status":  404,
+                        "OK":  false,
+                        "TookMs":  56,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:25:51"
+                    },
+                    {
+                        "Url":  "https://truvern.com/vendors\u0026v=7e4625619f80465fa234a865b0c3e540",
+                        "Endpoint":  "/vendors",
+                        "Status":  404,
+                        "OK":  false,
+                        "TookMs":  64,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:25:51"
+                    }
+                ],
+    "Artifacts":  {
+
+                  }
+}

@@ -1,0 +1,5 @@
+Contact: mailto:support@truvern.com
+Expires: 2026-04-29
+Policy: https://truvern.com/legal/security
+Preferred-Languages: en
+Hiring: https://truvern.com/careers

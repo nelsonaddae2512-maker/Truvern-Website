@@ -1,0 +1,25 @@
+﻿import { getVendorsSafe } from "@/app/lib/safe";
+
+export const revalidate = 0;
+
+export default async function TrustNetworkPage() {
+  const { vendors } = await getVendorsSafe();
+  return (
+    <main style={{maxWidth:960,margin:"40px auto",padding:"0 16px"}}>
+      <h1>Truvern – Trust Network</h1>
+      <p style={{opacity:.8}}>Showing vendors from <code>/api/vendors</code>.</p>
+      {vendors.length === 0 ? (
+        <p>No vendors yet.</p>
+      ) : (
+        <ul>
+          {vendors.map((v:any, i:number) => (
+            <li key={v.id ?? i}>
+              <strong>{v.name ?? v.title ?? "Vendor"}</strong>
+              {v.tier ? <> · Tier: {v.tier}</> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}

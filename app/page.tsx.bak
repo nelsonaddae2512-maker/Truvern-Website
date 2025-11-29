@@ -1,0 +1,36 @@
+"use client";
+
+async function getVendors() {
+  try {
+    const r = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/vendors`, {
+      cache: "no-store",
+    });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j?.vendors) ? j.vendors : [];
+  } catch {
+    return [];
+  }
+}
+
+export default async function Page() {
+  const vendors = await getVendors();
+  return (
+    <main className="page">
+      <h1 className="text-2xl font-semibold mb-4">Truvern</h1>
+      <p className="text-zinc-600 mb-6">
+        Trust your vendors. Move faster with confidence.
+      </p>
+
+      {vendors.length === 0 ? (
+        <div className="text-sm text-zinc-500">No vendors yet.</div>
+      ) : (
+        <ul className="list-disc pl-6">
+          {vendors.map((v) => (
+            <li key={v.id}>{v.name ?? "Vendor"}</li>
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}

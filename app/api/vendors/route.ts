@@ -1,37 +1,34 @@
-﻿import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+// app/api/vendors/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+export const runtime = "nodejs";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const page = Number(searchParams.get('page') ?? '1')
-  const pageSize = Math.min(Number(searchParams.get('pageSize') ?? '24'), 50)
-  const verified = searchParams.get('verified')
-  const q = searchParams.get('q')?.trim()
-
-  const where: any = {}
-  if (verified === 'true') where.verified = true
-  if (q) where.name = { contains: q, mode: 'insensitive' }
-
-  const [items, total] = await Promise.all([
-    prisma.vendor.findMany({
-      where,
-      orderBy: [ { id: 'desc' } ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+export async function GET() {
+  try {
+    const vendors = await prisma.vendor.findMany({
+      orderBy: { name: "asc" },
       select: {
-  id: true,
-  name: true,
-},
-    }),
-    prisma.vendor.count({ where }),
-  ])
+        id: true,
+        name: true,
+        riskScore: true,
+        createdAt: true,
+      },
+    });
 
-  return NextResponse.json({
-    page, pageSize, total, items,
-  })
+    return NextResponse.json(vendors, { status: 200 });
+  } catch (err: any) {
+    // This will show up in Vercel runtime logs
+    console.error("[/api/vendors] ERROR:", err);
+
+    const safeError = {
+      error: "Failed to load vendors",
+      // short diagnostics for us, still safe for browser
+      code: err?.code ?? null,
+      message: err?.message ?? null,
+      meta: err?.meta ?? null,
+    };
+
+    return NextResponse.json(safeError, { status: 500 });
+  }
 }
-
-

@@ -1,0 +1,22 @@
+﻿=== Truvern Deploy Report 2025-10-30 00:02:48 ===
+node.exe : Vercel CLI 48.6.7
+At C:\Users\MR.NELSON\AppData\Roaming\npm\vercel.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/vercel/dist/vc.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Vercel CLI 48.6.7:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+WARN! `--confirm` is deprecated, please use `--yes` instead
+Retrieving projectΓÇª
+Deploying nelson-addaes-projects/truvern
+Uploading [--------------------] (0.0B/35.9KB)
+Uploading [=====---------------] (9.8KB/35.9KB)
+Uploading [==========----------] (18.8KB/35.9KB)
+Uploading [===============-----] (27.6KB/35.9KB)
+Uploading [====================] (35.9KB/35.9KB)
+Inspect: https://vercel.com/nelson-addaes-projects/truvern/Czi3YHho2xMRauoAaH7yEAZGNQWi [6s]
+Production: https://truvern-mjrqkbm9l-nelson-addaes-projects.vercel.app [6s]
+Queued
+Building
+Completing
+https://truvern-mjrqkbm9l-nelson-addaes-projects.vercel.app

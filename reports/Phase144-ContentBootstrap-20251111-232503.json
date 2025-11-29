@@ -1,0 +1,61 @@
+﻿{
+    "Phase":  "Phase144-ContentBootstrap",
+    "Timestamp":  "2025-11-11T23:25:06",
+    "Base":  "https://truvern.com",
+    "Verify":  [
+                   {
+                       "Path":  "/",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "OGImage":  "",
+                       "OGHTTP":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/trust-network",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "OGImage":  "",
+                       "OGHTTP":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/reports/board",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "OGImage":  "",
+                       "OGHTTP":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/vendors",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "OGImage":  "",
+                       "OGHTTP":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/sitemap.xml",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "OGImage":  "",
+                       "OGHTTP":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/robots.txt",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "OGImage":  "",
+                       "OGHTTP":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   }
+               ]
+}

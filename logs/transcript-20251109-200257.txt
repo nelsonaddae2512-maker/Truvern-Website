@@ -1,0 +1,29 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251109200257
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 9340
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+[20:02:57] === Phase122g start ===
+[20:02:57] Project: truvern | Team: nelson-addaes-projects
+[20:02:57] Main log: C:\Users\MR.NELSON\Downloads\truvern\logs\phase122g-20251109-200257.log
+[20:02:57] Deploy log: C:\Users\MR.NELSON\Downloads\truvern\logs\vercel-deploy-20251109-200257.txt
+[20:02:57] Vercel CLI: C:\Users\MR.NELSON\AppData\Roaming\npm\vercel.cmd
+PS>TerminatingError(vercel.cmd): "The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: Vercel CLI 48.9.0"
+❌ ERROR: Vercel CLI 48.9.0
+**********************
+Windows PowerShell transcript end
+End time: 20251109200257
+**********************

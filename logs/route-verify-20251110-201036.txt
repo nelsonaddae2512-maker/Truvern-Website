@@ -1,0 +1,9 @@
+﻿=== Phase122y Auto Verify Routes (20251110-201036) ===
+OK  https://truvern.com/ -> 200 (204 ms)
+OK  https://truvern.com/trust-network -> 200 (1300 ms)
+OK  https://truvern.com/vendors -> 200 (198 ms)
+OK  https://truvern.com/reports/board -> 200 (126 ms)
+OK  https://truvern.com/reports/board/preview -> 200 (134 ms)
+OK  https://truvern.com/pricing -> 200 (138 ms)
+OK  https://truvern.com/subscribe -> 200 (114 ms)
+All routes returned HTTP 200.

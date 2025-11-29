@@ -1,0 +1,49 @@
+﻿// app/layout.tsx
+import "./globals.css";
+import type { Metadata } from "next";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://truvern.com"),
+  title: {
+    default: "Truvern",
+    template: "%s | Truvern",
+  },
+  description: "Truvern – Vendor trust network and TPRM.",
+  openGraph: {
+    title: "Truvern – Vendor trust network and TPRM.",
+    description:
+      "Third-party risk management, vendor trust scores, and board-ready reports.",
+    url: "https://truvern.com",
+    siteName: "Truvern",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Truvern – Vendor trust network and TPRM.",
+      },
+    ],
+    type: "website",
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <Navbar />
+        <main>{children}</main>
+        <Footer />
+      </body>
+    </html>
+  );
+}

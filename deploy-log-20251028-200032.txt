@@ -1,0 +1,140 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251028200032
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: powershell -NoLogo -NoExit -ExecutionPolicy Bypass -File .\repair-build-and-deploy.ps1
+Process ID: 19372
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+✔ package.json written
+
+📦 Installing dependencies...
+
+added 149 packages in 2m
+
+🏗️  Building (Next.js)...
+
+> truvern@1.0.0 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextj
+s.org/docs/messages/no-cache
+   ▲ Next.js 15.0.3
+   - Environments: .env.production.local, .env.local, .env
+   - Experiments (use with caution):
+     · optimizeCss
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./app/api/evidence/list/route.ts
+Module not found: Can't resolve 'next-auth'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/api/evidence/presign/route.ts
+Module not found: Can't resolve '@aws-sdk/client-s3'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/api/evidence/presign/route.ts
+Module not found: Can't resolve '@aws-sdk/s3-request-presigner'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/api/evidence/presign/route.ts
+Module not found: Can't resolve 'next-auth'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./app/api/evidence/review/route.ts
+Module not found: Can't resolve 'next-auth'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors
+
+🚀 Deploying (prod)...
+Vercel CLI 48.4.0
+- Deploying nelson-addaes-projects/truvern
+��  Inspect: https://vercel.com/nelson-addaes-projects/truvern/3cs89YrvJkNso89tNai5zvyFF7pJ [12s]
+✅  Production: https://truvern-5g4rrstdj-nelson-addaes-projects.vercel.app [12s]
+- Queued
+2025-10-29T01:02:58.423Z  Running build in Washington, D.C., USA (East) – iad1
+2025-10-29T01:02:58.424Z  Build machine configuration: 2 cores, 8 GB
+2025-10-29T01:02:58.589Z  Retrieving list of deployment files...
+2025-10-29T01:02:59.370Z  Downloading 2641 deployment files...
+2025-10-29T01:03:18.167Z  Restored build cache from previous deployment (GuhXSYayPCksoWLJSEBA76GjHUT
+9)
+2025-10-29T01:03:18.749Z  Running "vercel build"
+2025-10-29T01:03:19.143Z  Vercel CLI 48.6.0
+2025-10-29T01:03:19.853Z  Installing dependencies...
+2025-10-29T01:03:32.133Z
+2025-10-29T01:03:32.134Z  added 106 packages, removed 193 packages, and changed 20 packages in 12s
+2025-10-29T01:03:32.134Z
+2025-10-29T01:03:32.134Z  40 packages are looking for funding
+2025-10-29T01:03:32.134Z    run `npm fund` for details
+2025-10-29T01:03:32.170Z  Detected Next.js version: 15.0.3
+2025-10-29T01:03:32.173Z  Running "npm run build"
+2025-10-29T01:03:32.297Z
+2025-10-29T01:03:32.298Z  > truvern@1.0.0 build
+2025-10-29T01:03:32.298Z  > next build
+2025-10-29T01:03:32.298Z
+2025-10-29T01:03:32.946Z     ▲ Next.js 15.0.3
+2025-10-29T01:03:32.948Z     - Environments: .env
+2025-10-29T01:03:32.948Z     - Experiments (use with caution):
+2025-10-29T01:03:32.948Z       · optimizeCss
+2025-10-29T01:03:32.948Z
+2025-10-29T01:03:33.004Z     Creating an optimized production build ...
+2025-10-29T01:03:40.217Z  Failed to compile.
+2025-10-29T01:03:40.217Z
+2025-10-29T01:03:40.217Z  ./app/api/evidence/list/route.ts
+2025-10-29T01:03:40.217Z  Module not found: Can't resolve 'next-auth'
+2025-10-29T01:03:40.217Z
+2025-10-29T01:03:40.217Z  https://nextjs.org/docs/messages/module-not-found
+2025-10-29T01:03:40.218Z
+2025-10-29T01:03:40.218Z  ./app/api/evidence/presign/route.ts
+2025-10-29T01:03:40.218Z  Module not found: Can't resolve '@aws-sdk/client-s3'
+2025-10-29T01:03:40.218Z
+2025-10-29T01:03:40.218Z  https://nextjs.org/docs/messages/module-not-found
+2025-10-29T01:03:40.218Z
+2025-10-29T01:03:40.218Z  ./app/api/evidence/presign/route.ts
+2025-10-29T01:03:40.218Z  Module not found: Can't resolve '@aws-sdk/s3-request-presigner'
+2025-10-29T01:03:40.218Z
+2025-10-29T01:03:40.218Z  https://nextjs.org/docs/messages/module-not-found
+2025-10-29T01:03:40.218Z
+2025-10-29T01:03:40.218Z  ./app/api/evidence/presign/route.ts
+2025-10-29T01:03:40.218Z  Module not found: Can't resolve 'next-auth'
+2025-10-29T01:03:40.218Z
+2025-10-29T01:03:40.219Z  https://nextjs.org/docs/messages/module-not-found
+2025-10-29T01:03:40.219Z
+2025-10-29T01:03:40.219Z  ./app/api/evidence/review/route.ts
+2025-10-29T01:03:40.219Z  Module not found: Can't resolve 'next-auth'
+2025-10-29T01:03:40.219Z
+2025-10-29T01:03:40.219Z  https://nextjs.org/docs/messages/module-not-found
+2025-10-29T01:03:40.220Z
+2025-10-29T01:03:40.236Z
+2025-10-29T01:03:40.237Z  > Build failed because of webpack errors
+2025-10-29T01:03:40.263Z  Error: Command "npm run build" exited with 1
+✔ Production URL: https://truvern-e9mqe3iqk-nelson-addaes-projects.vercel.app
+🔗 Aliasing truvern.com ...
+Vercel CLI 48.4.0
+> Assigning alias truvern.com to deployment truvern-e9mqe3iqk-nelson-addaes-projects.vercel.app
+- Fetching domain truvern.com under nelson-addaes-projects
+Error: The deployment https://truvern-e9mqe3iqk-nelson-addaes-projects.vercel.app is not ready.
+✅ https://truvern.com returned 200 OK
+**********************
+Windows PowerShell transcript end
+End time: 20251028200352
+**********************

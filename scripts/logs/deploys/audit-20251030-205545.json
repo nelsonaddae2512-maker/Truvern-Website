@@ -1,0 +1,30 @@
+﻿{
+    "time":  "2025-10-30T20:56:11.2563536-05:00",
+    "duration_ms":  25383,
+    "branch":  "main",
+    "commit":  "002d455",
+    "deploy":  {
+                   "prod":  "",
+                   "ok":  false,
+                   "output":  "Vercel CLI 48.6.7\nWARN! `--confirm` is deprecated, please use `--yes` instead\nLoading scopesΓÇª\nError: An unexpected error occurred in deploy: TypeError: Cannot read properties of undefined (reading \u0027value\u0027)",
+                   "inspect":  "",
+                   "exit":  1
+               },
+    "health":  {
+                   "checked":  true,
+                   "ops":  {
+                               "ok":  false,
+                               "code":  0,
+                               "err":  null
+                           },
+                   "api":  {
+                               "ok":  false,
+                               "code":  0,
+                               "err":  null
+                           }
+               },
+    "machine":  {
+                    "user":  "MR.NELSON",
+                    "host":  "DESKTOP-43PR0M5"
+                }
+}

@@ -1,0 +1,34 @@
+﻿[
+    {
+        "Path":  "/",
+        "HTTP":  200,
+        "OK":  true,
+        "OG":  0,
+        "Canonical":  "",
+        "HostOK":  false
+    },
+    {
+        "Path":  "/trust-network",
+        "HTTP":  200,
+        "OK":  true,
+        "OG":  0,
+        "Canonical":  "",
+        "HostOK":  false
+    },
+    {
+        "Path":  "/reports/board",
+        "HTTP":  200,
+        "OK":  true,
+        "OG":  0,
+        "Canonical":  "",
+        "HostOK":  false
+    },
+    {
+        "Path":  "/vendors",
+        "HTTP":  200,
+        "OK":  true,
+        "OG":  0,
+        "Canonical":  "",
+        "HostOK":  false
+    }
+]

@@ -1,0 +1,13 @@
+Vercel CLI 48.9.0
+Retrieving project…
+Deploying nelson-addaes-projects/truvern
+Uploading [--------------------] (0.0B/63.9KB)
+Uploading [=====---------------] (16.2KB/63.9KB)
+Uploading [==========----------] (33.0KB/63.9KB)
+Uploading [===============-----] (49.0KB/63.9KB)
+Uploading [====================] (63.9KB/63.9KB)
+Inspect: https://vercel.com/nelson-addaes-projects/truvern/3tSmL1kMZVQERXvjF44bkURGxYeh [9s]
+Production: https://truvern-b7m0nr6i7-nelson-addaes-projects.vercel.app [9s]
+https://truvern-b7m0nr6i7-nelson-addaes-projects.vercel.appQueued
+Building
+Completing

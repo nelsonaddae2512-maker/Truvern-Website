@@ -1,43 +1,33 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from 'next';
 
-export const site = {
-  name: "Truvern",
-  url: "https://truvern.com",
+export const defaultMetadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://truvern.com'),
+  applicationName: 'Truvern',
+  title: { default: 'Truvern', template: '%s — Truvern' },
   description:
-    "Truvern helps teams assess, compare, and continuously monitor third-party vendors.",
-};
-
-export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: {
-    default: site.name,
-    template: "%s • Truvern",
-  },
-  description: site.description,
-  keywords: [
-    "third-party risk",
-    "vendor security",
-    "trust network",
-    "TPRM",
-    "security questionnaires",
-  ],
-  alternates: { canonical: site.url },
+    'Truvern is the Vendor Trust Network for modern TPRM — interactive assessments, evidence, and board-ready risk reporting.',
+  authors: [{ name: 'Truvern' }],
+  keywords: ['TPRM', 'third-party risk', 'vendor risk', 'security questionnaires', 'risk scoring', 'Truvern'],
   openGraph: {
-    type: "website",
-    url: site.url,
-    title: site.name,
-    description: site.description,
-    siteName: "Truvern",
-    images: [{ url: "/opengraph-image.png" }],
+    type: 'website',
+    url: '/',
+    siteName: 'Truvern',
+    title: 'Truvern — Vendor Trust Network',
+    description:
+      'Assess vendors, share evidence, and report risk with confidence.',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630 }],
   },
   twitter: {
-    card: "summary_large_image",
-    title: site.name,
-    description: site.description,
-    images: ["/opengraph-image.png"],
+    card: 'summary_large_image',
+    title: 'Truvern — Vendor Trust Network',
+    description:
+      'Assess vendors, share evidence, and report risk with confidence.',
+    images: ['/opengraph-image.png'],
   },
+  alternates: { canonical: '/' },
   icons: {
-    shortcut: "/favicon.svg",
-    icon: "/favicon.svg",
+    icon: [{ url: '/favicon.ico' }, { url: '/favicon.svg' }],
+    apple: [{ url: '/apple-touch-icon.png' }],
   },
 };
+export default defaultMetadata;

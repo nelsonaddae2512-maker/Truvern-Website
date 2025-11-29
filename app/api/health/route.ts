@@ -1,9 +1,2 @@
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    ts: new Date().toISOString(),
-    uptimeSec: Math.round(process.uptime()),
-  });
-}
+﻿export const runtime = 'nodejs';
+export async function GET() { return new Response('ok', { status: 200 }); }

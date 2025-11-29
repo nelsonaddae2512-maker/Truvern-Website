@@ -1,0 +1,68 @@
+﻿{
+    "Phase":  "Phase136-FinalBoardSync",
+    "Timestamp":  "2025-11-11T22:18:16",
+    "Base":  "https://truvern.com",
+    "Results":  [
+                    {
+                        "Base":  "https://truvern.com",
+                        "Endpoint":  "/",
+                        "Url":  "https://truvern.com/",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  435,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:18:09"
+                    },
+                    {
+                        "Base":  "https://truvern.com",
+                        "Endpoint":  "/api/health",
+                        "Url":  "https://truvern.com/api/health",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  1345,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:18:10"
+                    },
+                    {
+                        "Base":  "https://truvern.com",
+                        "Endpoint":  "/trust-network",
+                        "Url":  "https://truvern.com/trust-network",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  1203,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:18:12"
+                    },
+                    {
+                        "Base":  "https://truvern.com",
+                        "Endpoint":  "/reports/board",
+                        "Url":  "https://truvern.com/reports/board",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  335,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:18:12"
+                    },
+                    {
+                        "Base":  "https://truvern.com",
+                        "Endpoint":  "/vendors",
+                        "Url":  "https://truvern.com/vendors",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  125,
+                        "Error":  null,
+                        "Timestamp":  "2025-11-11T22:18:12"
+                    },
+                    {
+                        "Base":  "https://truvern.com",
+                        "Endpoint":  "/api/board.csv",
+                        "Url":  "https://truvern.com/api/board.csv",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  40,
+                        "Error":  "The remote server returned an error: (404) Not Found.",
+                        "Timestamp":  "2025-11-11T22:18:14"
+                    }
+                ],
+    "Artifacts":  "C:\\Users\\MR.NELSON\\Downloads\\truvern\\artifacts\\phase136-20251111-221809\\board-20251111-221809.html"
+}

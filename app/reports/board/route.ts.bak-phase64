@@ -1,0 +1,23 @@
+﻿// Forced HTML route for diagnostic purposes
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Board Route - Forced</title>
+<style>body{font-family:system-ui,Segoe UI,Roboto,Arial;padding:24px}code{background:#f4f4f5;padding:2px 4px;border-radius:4px}</style>
+</head>
+<body>
+  <h1>/reports/board — Forced Route ✅</h1>
+  <p>If you can see this, the path <code>/reports/board</code> is reachable via the App Router.</p>
+  <ul>
+    <li><a href="/api/reports/board?org=demo-2128873b">API JSON</a></li>
+    <li><a href="/api/reports/board?org=demo-2128873b&format=csv">API CSV</a></li>
+  </ul>
+  <p>Next step: we can switch back to <code>page.tsx</code> once this confirms routing is clear.</p>
+</body>
+</html>`;
+  return new NextResponse(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}

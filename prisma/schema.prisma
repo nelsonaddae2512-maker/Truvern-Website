@@ -7,59 +7,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Organization {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  domain    String?
-  plan      String   @default("free")
-  seats     Int      @default(3)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Vendor {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  riskScore   Int?
+  createdAt   DateTime     @default(now())
+  assessments Assessment[]
+
+  evidence Evidence[]
+  issues   Issue[]
 }
 
-model AssessmentSubmission {
-  id           String   @id @default(cuid())
-  companyName  String
-  contactEmail String
-  answersJson  Json
-  createdAt    DateTime @default(now())
+model Assessment {
+  id        Int      @id @default(autoincrement())
+  vendorId  Int
+  score     Int?
+  riskLevel String?
+  summary   String?
+  createdAt DateTime @default(now())
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
 }
+
+model Issue {
+  id       Int    @id @default(autoincrement())
+  title    String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId Int
+}
+
 model Evidence {
-  id          String   @id @default(cuid())
-  userId      String
+  id       Int    @id @default(autoincrement())
+  vendorId Int
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+
   title       String?
   description String?
-  vendor      String?
-  filename    String?
-  url         String?
-  size        Int?
-  note        String?     // <-- added
   fileUrl     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-model Usage {
-  id              String   @id @default(cuid())
-  organizationId  String
-  userId          String?
-  action          String?
-  description     String?     // <-- added to match seed.ts
-  value           Int      @default(0)
-  meta            Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  fileName    String?
+  contentType String?
+  size        Int?
+  uploadedBy  String?
 
-  @@index([organizationId, createdAt(sort: Desc)])
-}
-model Vendor {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  website     String?
-  logoUrl     String?
-  description String?    // used by seed.ts
-  category    String?    // used by seed.ts
-  trustScore  Int?       // used by seed.ts
-  status      String   @default("active")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // 🔹 THIS IS THE FIELD PRISMA IS COMPLAINING ABOUT
+  uploadedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
 }

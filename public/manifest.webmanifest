@@ -1,0 +1,9 @@
+﻿{
+  "name": "Truvern",
+  "short_name": "Truvern",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#347dff",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

@@ -1,0 +1,32 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251031214411
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Phase22-Rev3-TokenAuth.ps1
+Process ID: 16968
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS>TerminatingError(): "Vercel authentication failed when using --token."
+? Unhandled error on attempt 1: Vercel authentication failed when using --token.
+? Retrying in 15 seconds...
+PS>TerminatingError(): "Vercel authentication failed when using --token."
+? Unhandled error on attempt 2: Vercel authentication failed when using --token.
+? Retrying in 15 seconds...
+PS>TerminatingError(): "Vercel authentication failed when using --token."
+? Unhandled error on attempt 3: Vercel authentication failed when using --token.
+? Finished without a successful deploy after 3 attempts.
+Logs root: C:\Users\MR.NELSON\Downloads\truvern\logs\phase22rev3
+**********************
+Windows PowerShell transcript end
+End time: 20251031214442
+**********************

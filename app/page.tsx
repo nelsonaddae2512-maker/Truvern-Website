@@ -1,56 +1,63 @@
-﻿import { Button } from "../components/ui/Button";
+﻿import Link from "next/link";
 
-function LogosRow() {
-  const names = ["Acme","Globex","Umbrella","Initech","Hooli","Stark"];
-  return (
-    <section className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-6">
-      {names.map(n => (
-        <div key={n} className="rounded-lg border bg-white py-3 text-center text-sm">{n}</div>
-      ))}
-    </section>
-  );
-}
+export const dynamic = "force-static";
 
-function Features() {
-  const items = [
-    { title: "Trust Network", desc: "See real-world signals and share due diligence across your org." },
-    { title: "Automated Assessments", desc: "Gather evidence, score controls, and export reports in minutes." },
-    { title: "Continuous Monitoring", desc: "Track changes, alerts, and contract obligations over time." },
-  ];
+export default function HomePage() {
   return (
-    <section className="mx-auto mt-20 grid max-w-6xl grid-cols-1 gap-6 px-6 sm:grid-cols-3">
-      {items.map(i => (
-        <div key={i.title} className="rounded-xl border bg-white p-6">
-          <div className="text-lg font-semibold">{i.title}</div>
-          <p className="mt-2 text-sm text-zinc-600">{i.desc}</p>
+    <main className="min-h-screen bg-slate-950 text-slate-50">
+      <section className="max-w-5xl mx-auto px-4 py-16 space-y-10">
+        <div className="space-y-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-sky-400">
+            Truvern Â· Third-Party Risk Network
+          </p>
+          <h1 className="text-3xl md:text-4xl font-semibold leading-tight">
+            One place to see, prove, and share{" "}
+            <span className="text-sky-400">third-party risk posture</span>.
+          </h1>
+          <p className="text-sm md:text-base text-slate-300 max-w-2xl">
+            Truvern connects your vendors, evidence, and board-level reporting
+            in a single, always-current trust network. No spreadsheet rodeos,
+            no one-off questionnaires, just clear answers you can defend.
+          </p>
         </div>
-      ))}
-    </section>
-  );
-}
 
-export default function Home() {
-  return (
-    <main className="mx-auto max-w-6xl px-6 py-16">
-      <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm text-zinc-600">Live on Vercel • Truvern</span>
-      <h1 className="mt-6 text-5xl font-extrabold tracking-tight">Trust your vendors.</h1>
-      <h2 className="text-4xl font-extrabold tracking-tight">Move faster with confidence.</h2>
-      <p className="mt-4 max-w-2xl text-zinc-600">
-        Truvern helps teams assess, compare, and continuously monitor third-party vendors.
-      </p>
-      <div className="mt-6 flex gap-3">
-        <Button href="/assessment" className="bg-black text-white hover:bg-zinc-800">Get started</Button>
-        <Button href="/compare" className="border hover:bg-zinc-50">Compare vendors</Button>
-      </div>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/trust-network"
+            className="inline-flex items-center rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 transition"
+          >
+            View Trust Network
+          </Link>
+          <Link
+            href="/vendors"
+            className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-900 transition"
+          >
+            Open Vendor Workspace
+          </Link>
+        </div>
 
-      <LogosRow />
-      <Features />
-
-      <section className="mx-auto mt-20 max-w-3xl rounded-2xl border bg-white px-6 py-8 text-center">
-        <h3 className="text-2xl font-bold">Ready to modernize third-party risk?</h3>
-        <p className="mt-2 text-zinc-600">Start free. No credit card required.</p>
-        <div className="mt-5 flex justify-center">
-          <Button href="/assessment" className="bg-black text-white hover:bg-zinc-800">Start now</Button>
+        <div className="grid gap-4 md:grid-cols-3 text-xs md:text-sm text-slate-300">
+          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-1">
+            <p className="font-medium text-slate-100">Live vendor risk scores</p>
+            <p>
+              Normalize SIG, CAIQ, custom questionnaires, and evidence into a
+              single health score per vendor.
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-1">
+            <p className="font-medium text-slate-100">Board-ready reports</p>
+            <p>
+              Export concise, defensible views for the board without exposing
+              all the operational detail behind the scenes.
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-1">
+            <p className="font-medium text-slate-100">Vendor-friendly portal</p>
+            <p>
+              Give vendors one link where they can answer once, share everywhere,
+              and track their own remediation.
+            </p>
+          </div>
         </div>
       </section>
     </main>

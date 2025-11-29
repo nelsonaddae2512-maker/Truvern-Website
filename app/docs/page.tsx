@@ -1,7 +1,8 @@
-﻿export const dynamic = "force-static";
+﻿import { ensureArray } from '@/app/lib/safe';
+export const dynamic = "force-static";
 
 export const metadata = {
-  title: "Docs â€¢ Truvern",
+  title: "Docs Ã¢â‚¬Â¢ Truvern",
   description: "Developer & API documentation."
 };
 
@@ -15,4 +16,6 @@ export default function Page() {
     </main>
   );
 }
+
+
 

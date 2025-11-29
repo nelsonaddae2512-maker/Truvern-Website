@@ -1,0 +1,4 @@
+Vercel CLI 48.9.0
+Retrieving project…
+Deploying nelson-addaes-projects/truvern
+^C

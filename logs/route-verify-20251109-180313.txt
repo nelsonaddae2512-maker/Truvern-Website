@@ -1,0 +1,4 @@
+﻿OK	https://truvern.com/	200
+OK	https://truvern.com/trust-network	200
+OK	https://truvern.com/vendors	200
+OK	https://truvern.com/reports/board	200

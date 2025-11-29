@@ -1,0 +1,9 @@
+﻿2025-11-08 21:03:27 |     9761 | C:\Users\MR.NELSON\Downloads\truvern\Phase119-UI-Polish.ps1
+2025-11-08 18:34:02 |     3650 | C:\Users\MR.NELSON\Downloads\truvern\Phase116-FinalizeUI.ps1
+2025-11-08 17:05:10 |     4865 | C:\Users\MR.NELSON\Downloads\truvern\Phase114-DirectRun.ps1
+2025-11-08 16:38:41 |     3071 | C:\Users\MR.NELSON\Downloads\truvern\Phase113b-FindTruvern.ps1
+2025-11-08 16:12:14 |     5173 | C:\Users\MR.NELSON\Downloads\truvern\Phase113-WorkspaceSwitch.ps1
+2025-11-07 23:04:54 |     9461 | C:\Users\MR.NELSON\Downloads\truvern\Phase108-FinalTheme.ps1
+2025-11-07 22:40:05 |    11325 | C:\Users\MR.NELSON\Downloads\truvern\Phase107-FinalPolish.ps1
+2025-11-07 22:17:53 |     5385 | C:\Users\MR.NELSON\Downloads\truvern\Phase106-FIX.ps1
+2025-11-07 21:52:06 |     7937 | C:\Users\MR.NELSON\Downloads\truvern\Phase104b-HomePageRebuild.ps1

@@ -1,0 +1,48 @@
+Vercel CLI 48.4.0
+WARN! `--confirm` is deprecated, please use `--yes` instead
+Fetching deployments in nelson-addaes-projects
+> Production deployments for nelson-addaes-projects/truvern [136ms]
+
+  Age     Deployment                                                      Status      Environment     Duration     Username                 
+  1h      https://truvern-5g4rrstdj-nelson-addaes-projects.vercel.app     ● Error     Production      42s          nelsonaddae2512-1445     
+  1h      https://truvern-nydnjcgvy-nelson-addaes-projects.vercel.app     ● Error     Production      24s          nelsonaddae2512-1445     
+  21h     https://truvern-3nibh1ooj-nelson-addaes-projects.vercel.app     ● Error     Production      45s          nelsonaddae2512-1445     
+  22h     https://truvern-3mr8wnzs3-nelson-addaes-projects.vercel.app     ● Error     Production      28s          nelsonaddae2512-1445     
+  22h     https://truvern-b8l1wn4ku-nelson-addaes-projects.vercel.app     ● Error     Production      31s          nelsonaddae2512-1445     
+  22h     https://truvern-8wg0etkxh-nelson-addaes-projects.vercel.app     ● Ready     Production      47s          nelsonaddae2512-1445     
+  22h     https://truvern-qb56urle7-nelson-addaes-projects.vercel.app     ● Ready     Production      51s          nelsonaddae2512-1445     
+  22h     https://truvern-fstnop6hq-nelson-addaes-projects.vercel.app     ● Ready     Production      52s          nelsonaddae2512-1445     
+  22h     https://truvern-lqjkpm821-nelson-addaes-projects.vercel.app     ● Ready     Production      50s          nelsonaddae2512-1445     
+  22h     https://truvern-oq37c6z1y-nelson-addaes-projects.vercel.app     ● Ready     Production      52s          nelsonaddae2512-1445     
+  22h     https://truvern-cq9zgs40i-nelson-addaes-projects.vercel.app     ● Ready     Production      49s          nelsonaddae2512-1445     
+  23h     https://truvern-e3m4hhclp-nelson-addaes-projects.vercel.app     ● Ready     Production      53s          nelsonaddae2512-1445     
+  24h     https://truvern-dxhcz906r-nelson-addaes-projects.vercel.app     ● Ready     Production      48s          nelsonaddae2512-1445     
+  24h     https://truvern-rf3kipaqe-nelson-addaes-projects.vercel.app     ● Ready     Production      48s          nelsonaddae2512-1445     
+  1d      https://truvern-7kdmiacyk-nelson-addaes-projects.vercel.app     ● Ready     Production      50s          nelsonaddae2512-1445     
+  1d      https://truvern-5jn5dzczw-nelson-addaes-projects.vercel.app     ● Ready     Production      54s          nelsonaddae2512-1445     
+  1d      https://truvern-buv4nfp4i-nelson-addaes-projects.vercel.app     ● Error     Production      33s          nelsonaddae2512-1445     
+  1d      https://truvern-n484ds65c-nelson-addaes-projects.vercel.app     ● Error     Production      29s          nelsonaddae2512-1445     
+  1d      https://truvern-9v6ewsyyv-nelson-addaes-projects.vercel.app     ● Error     Production      30s          nelsonaddae2512-1445     
+  1d      https://truvern-e9mqe3iqk-nelson-addaes-projects.vercel.app     ● Error     Production      32s          nelsonaddae2512-1445     
+
+https://truvern-5g4rrstdj-nelson-addaes-projects.vercel.app
+https://truvern-nydnjcgvy-nelson-addaes-projects.vercel.app
+https://truvern-3nibh1ooj-nelson-addaes-projects.vercel.app
+https://truvern-3mr8wnzs3-nelson-addaes-projects.vercel.app
+https://truvern-b8l1wn4ku-nelson-addaes-projects.vercel.app
+https://truvern-8wg0etkxh-nelson-addaes-projects.vercel.app
+https://truvern-qb56urle7-nelson-addaes-projects.vercel.app
+https://truvern-fstnop6hq-nelson-addaes-projects.vercel.app
+https://truvern-lqjkpm821-nelson-addaes-projects.vercel.app
+https://truvern-oq37c6z1y-nelson-addaes-projects.vercel.app
+https://truvern-cq9zgs40i-nelson-addaes-projects.vercel.app
+https://truvern-e3m4hhclp-nelson-addaes-projects.vercel.app
+https://truvern-dxhcz906r-nelson-addaes-projects.vercel.app
+https://truvern-rf3kipaqe-nelson-addaes-projects.vercel.app
+https://truvern-7kdmiacyk-nelson-addaes-projects.vercel.app
+https://truvern-5jn5dzczw-nelson-addaes-projects.vercel.app
+https://truvern-buv4nfp4i-nelson-addaes-projects.vercel.app
+https://truvern-n484ds65c-nelson-addaes-projects.vercel.app
+https://truvern-9v6ewsyyv-nelson-addaes-projects.vercel.app
+https://truvern-e9mqe3iqk-nelson-addaes-projects.vercel.app
+> To display the next page, run `vercel ls truvern --scope nelson-addaes-projects --prod --confirm --yes --next 1761615014526`

@@ -1,25 +1,18 @@
-﻿import Image from "next/image";
+﻿import React from "react";
 
-export default function VendorCard({ v }: any) {
+export default function VendorCard({ name = "Acme Inc.", score = "A+" }) {
   return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition">
-      <div className="flex items-center gap-3">
-        {v?.logoUrl ? (
-          <Image
-            src={v.logoUrl}
-            alt={v.name || "Vendor Logo"}
-            width={40}
-            height={40}
-            className="rounded"
-          />
-        ) : (
-          <div className="w-10 h-10 bg-gray-200 rounded" />
-        )}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800">{v?.name || "Vendor Name"}</h3>
-          <p className="text-xs text-gray-500">{v?.industry || "Industry"}</p>
-        </div>
-      </div>
+    <div style={{
+      padding: "1rem",
+      border: "1px solid #e5e7eb",
+      borderRadius: "8px",
+      background: "#ffffff",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+      maxWidth: "300px",
+      textAlign: "center"
+    }}>
+      <h3 style={{ margin: 0, color: "#111827" }}>{name}</h3>
+      <p style={{ color: "#6b7280", marginTop: "0.25rem" }}>Trust Score: {score}</p>
     </div>
   );
 }

@@ -1,0 +1,16 @@
+﻿import FooterSafe from "./components/FooterSafe";
+
+/* Phase116: footer mount */
+export default function PageWithFooterWrapper() {
+  // If the original file already exported default Page(), keep it;
+  // otherwise, render <main/> that wraps children + footer.
+  try {
+    // @ts-ignore - reuse Page if it exists in the original file (compiled above)
+    if (typeof Page === "function") {
+      // @ts-ignore
+      return (<><Page /><FooterSafe /></>);
+    }
+  } catch {}
+  return (<><main className="px-6 py-12">Welcome to Truvern</main><FooterSafe /></>);
+}
+

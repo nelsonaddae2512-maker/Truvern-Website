@@ -1,4 +1,4 @@
-
+﻿
 import React from "react";
 
 async function getData(slug: string){

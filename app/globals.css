@@ -1,10 +1,114 @@
-﻿@tailwind base;
+/* app/globals.css */
+
+/* Tailwind layers */
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  font-family: system-ui, sans-serif;
-  margin: 0;
-  padding: 0;
-  background: #f9fafb;
+/* ---------- Base theme ---------- */
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-50 antialiased;
+}
+
+/* App shell */
+
+main {
+  @apply min-h-screen;
+}
+
+/* Top nav */
+
+.truvern-nav {
+  @apply sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur;
+}
+
+.truvern-nav-inner {
+  @apply mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6;
+}
+
+.truvern-nav-brand {
+  @apply text-lg font-semibold tracking-tight text-white;
+}
+
+.truvern-nav-links {
+  @apply flex gap-4 text-sm text-slate-300;
+}
+
+.truvern-nav-link {
+  @apply rounded px-2 py-1 transition hover:bg-slate-800 hover:text-white;
+}
+
+/* Layout container */
+
+.truvern-shell {
+  @apply mx-auto flex max-w-6xl flex-col gap-8 px-4 pb-16 pt-8 md:px-6;
+}
+
+/* Hero / headings */
+
+.truvern-page-heading {
+  @apply text-2xl font-semibold tracking-tight text-white md:text-3xl;
+}
+
+.truvern-page-subheading {
+  @apply mt-1 max-w-2xl text-sm text-slate-300 md:text-base;
+}
+
+/* Card-style containers */
+
+.truvern-card {
+  @apply rounded-xl border border-slate-800 bg-slate-950/80 p-4 shadow-md md:p-6;
+}
+
+.truvern-card-header {
+  @apply mb-4 flex items-center justify-between gap-4;
+}
+
+.truvern-card-title {
+  @apply text-sm font-medium uppercase tracking-wide text-slate-400;
+}
+
+/* Tables (vendors / evidence) */
+
+.truvern-table {
+  @apply w-full table-auto border-collapse text-sm;
+}
+
+.truvern-table thead {
+  @apply bg-slate-900/80 text-left text-xs font-semibold uppercase tracking-wide text-slate-400;
+}
+
+.truvern-table th,
+.truvern-table td {
+  @apply border-b border-slate-800 px-4 py-3;
+}
+
+.truvern-table tbody tr:hover {
+  @apply bg-slate-900/60;
+}
+
+/* Buttons */
+
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-md transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-emerald-400 hover:text-emerald-400;
+}
+
+/* Evidence empty state */
+
+.truvern-empty {
+  @apply rounded-xl border border-dashed border-slate-700 bg-slate-900/60 px-4 py-8 text-center text-sm text-slate-400;
 }

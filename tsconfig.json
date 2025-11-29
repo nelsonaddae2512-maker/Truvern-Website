@@ -17,15 +17,18 @@
                             "jsx":  "preserve",
                             "baseUrl":  ".",
                             "paths":  {
-                                          "@/*":  [
-                                                      "src/*"
-                                                  ],
                                           "@components/*":  [
-                                                                "components/*"
+                                                                "./components/*"
                                                             ],
                                           "@app/*":  [
-                                                         "app/*"
-                                                     ]
+                                                         "./app/*"
+                                                     ],
+                                          "@lib/*":  [
+                                                         "./lib/*"
+                                                     ],
+                                          "@/*":  [
+                                                      "./*"
+                                                  ]
                                       },
                             "allowJs":  true,
                             "incremental":  true,

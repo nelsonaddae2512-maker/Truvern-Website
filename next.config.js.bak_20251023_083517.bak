@@ -1,0 +1,13 @@
+﻿const withFsFallback = (config) => {
+  config.resolve = config.resolve || {};
+  config.resolve.fallback = { ...(config.resolve.fallback || {}), fs: false, path: false };
+  return config;
+};
+
+/** Clean file written automatically to avoid duplicate declarations */
+const nextConfig = {
+  webpack: (config) => withFsFallback(config),
+  experimental: { serverComponentsExternalPackages: ['@prisma/client'] }
+};
+
+module.exports = nextConfig;

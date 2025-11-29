@@ -1,55 +1,33 @@
-import prisma from "@/lib/db";
+﻿import { NextResponse } from "next/server";
+export const runtime = "nodejs";
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";import type { NextRequest } from "next/server";
-
-/** Build-time friendly GET */
-export async function GET() {
-  return NextResponse.json({ ok: true }, { status: 200 });
-}
-
-/**
- * POST body (examples):
- * { "customerId": "cus_123", "returnUrl": "https://example.com/account" }
- * OR
- * { "customerEmail": "buyer@example.com", "returnUrl": "https://example.com/account" }
- */
-export async function POST(req: NextRequest){ const { default: Stripe } = await import("stripe"); 
+// GET /api/stripe/portal?cid=cus_123
+export async function GET(req: Request) {
   try {
-    const body = await req.json().catch(() => ({} as any));
-    const secret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET || "";
+    const secret = process.env.STRIPE_SECRET_KEY;
+    const appUrl = process.env.APP_URL ?? "https://truvern.com";
     if (!secret) {
-      return NextResponse.json({ ok: false, error: "stripe_key_missing" }, { status: 200 });
+      return NextResponse.json(
+        { ok: false, reason: "Stripe not configured: missing STRIPE_SECRET_KEY.", go: `${appUrl}/account/billing` },
+        { status: 200 }
+      );
     }
 
-    // Lazy import Stripe at request time
-    const { default: Stripe } = await import("stripe");
-    const stripe = new Stripe(secret as string, { apiVersion: "2024-06-20" } as any);
-
-    let customerId: string | undefined = typeof body.customerId === "string" ? body.customerId : undefined;
-    const returnUrl = String(body.returnUrl || process.env.PORTAL_RETURN_URL || "https://example.com/account");
-
-    // Optionally look up customer by email (soft-fail)
-    if (!customerId && typeof body.customerEmail === "string" && body.customerEmail.includes("@")) {
-      try {
-        const customers = await stripe.customers.list({ email: body.customerEmail, limit: 1 });
-        customerId = customers.data[0]?.id;
-      } catch { /* ignore */ }
+    const { searchParams } = new URL(req.url);
+    const cid = searchParams.get("cid"); // Stripe customer id
+    if (!cid) {
+      return NextResponse.json({ ok: false, reason: "Missing ?cid=StripeCustomerId" }, { status: 200 });
     }
 
-    if (!customerId) {
-      return NextResponse.json({ ok: false, error: "missing_customer" }, { status: 200 });
-    }
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(secret, { apiVersion: "2023-10-16" });
 
     const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl
+      customer: cid,
+      return_url: `${appUrl}/account/billing`
     });
-
     return NextResponse.json({ ok: true, url: session.url }, { status: 200 });
-  } catch {
-    return NextResponse.json({ ok: false, error: "internal" }, { status: 200 });
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? String(err) }, { status: 200 });
   }
 }
-

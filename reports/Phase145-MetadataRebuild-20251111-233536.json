@@ -1,0 +1,50 @@
+﻿{
+    "Phase":  "Phase145-MetadataRebuild-Fix",
+    "Timestamp":  "2025-11-11T23:35:48",
+    "Verify":  [
+                   {
+                       "Path":  "/",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "Bytes":  9680,
+                       "Html":  true,
+                       "Title":  "Truvern — Vendor Trust Network",
+                       "OG":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/trust-network",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "Bytes":  7017,
+                       "Html":  true,
+                       "Title":  "Truvern — Vendor Trust Network",
+                       "OG":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/reports/board",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "Bytes":  7295,
+                       "Html":  true,
+                       "Title":  "Truvern — Vendor Trust Network",
+                       "OG":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   },
+                   {
+                       "Path":  "/vendors",
+                       "HTTP":  200,
+                       "OK":  true,
+                       "Bytes":  6836,
+                       "Html":  true,
+                       "Title":  "Truvern — Vendor Trust Network",
+                       "OG":  0,
+                       "Canonical":  "",
+                       "HostOK":  false
+                   }
+               ]
+}

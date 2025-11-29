@@ -1,0 +1,58 @@
+import SiteHeader from "@/components/SiteHeader";
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import defaultMetadata from './metadata'
+import Header from './components/Header'
+import Footer from './components/Footer'
+import CookieConsent from './components/CookieConsent'
+import { Analytics } from '@vercel/analytics/react'
+import JsonLd from './components/JsonLd'
+
+export const metadata: Metadata = defaultMetadata
+
+const inter = Inter({ subsets: ['latin'] })
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>`r`n    <SiteHeader />`r`n    <div className="container-page py-8">
+        <Header />
+        {children}
+        <Footer />
+        <Analytics />
+        <CookieConsent />
+        <JsonLd
+          id="jsonld-org"
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Truvern",
+            "url": "https://truvern.com",
+            "logo": "https://truvern.com/favicon.svg",
+            "sameAs": ["https://www.linkedin.com", "https://x.com"]
+          }}
+        />
+        <JsonLd
+          id="jsonld-website"
+          data={{
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Truvern",
+            "url": "https://truvern.com",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://truvern.com/search?q={query}",
+              "query-input": "required name=query"
+            }
+          }}
+        />
+          </div>`r`n  </body>
+    </html>
+  )
+}
+

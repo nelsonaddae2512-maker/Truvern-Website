@@ -1,0 +1,51 @@
+export const metadata = {
+  title: "Board Report Preview – Truvern",
+  description: "Preview of the board report.",
+};
+
+type Vendor = { id?: number; name?: string };
+type BoardPayload = { vendors?: Vendor[]; generatedAt?: string } | Vendor[];
+
+async function getBoard(): Promise<{ vendors: Vendor[]; generatedAt?: string }> {
+  try {
+    const base =
+      process.env.NEXT_PUBLIC_SITE_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+    if (!base) return { vendors: [] };
+
+    // Use the stable API shape
+    const r = await fetch(`${base}/api/board`, { cache: "no-store" });
+    if (!r.ok) return { vendors: [] };
+
+    const j: BoardPayload = await r.json();
+    if (Array.isArray(j)) return { vendors: j };
+    const vendors = Array.isArray(j?.vendors) ? j.vendors : [];
+    const generatedAt = (j as any)?.generatedAt;
+    return { vendors, generatedAt };
+  } catch {
+    return { vendors: [] };
+  }
+}
+
+export default async function BoardPreviewPage() {
+  const { vendors, generatedAt } = await getBoard();
+  return (
+    <main className="container-page py-8">
+      <h1 className="text-2xl font-semibold tracking-tight">Board Report (Preview)</h1>
+      <p className="mt-2 text-sm text-zinc-500">
+        {vendors.length ? `Vendors: ${vendors.length}` : "No vendors yet."}
+        {generatedAt ? ` • Generated ${new Date(generatedAt).toLocaleString()}` : ""}
+      </p>
+
+      <ul className="mt-6 list-disc pl-6">
+        {vendors.slice(0, 50).map((v, i) => (
+          <li key={String(v?.id ?? i)}>{v?.name ?? "Vendor"}</li>
+        ))}
+      </ul>
+
+      <p className="mt-8 text-xs text-zinc-500">
+        This page is a server component and avoids client-only APIs.
+      </p>
+    </main>
+  );
+}

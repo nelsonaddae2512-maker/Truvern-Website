@@ -1,0 +1,496 @@
+﻿import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+
+type BoardTemplateId =
+  | "executive"
+  | "risk-matrix"
+  | "vendor-detail"
+  | "operations"
+  | "audit";
+
+type PageProps = {
+  searchParams?: { template?: string };
+};
+
+type TemplateOption = {
+  id: BoardTemplateId;
+  label: string;
+  description: string;
+};
+
+const TEMPLATE_OPTIONS: TemplateOption[] = [
+  {
+    id: "executive",
+    label: "Executive summary",
+    description: "Board-ready snapshot of overall vendor risk.",
+  },
+  {
+    id: "risk-matrix",
+    label: "Risk matrix",
+    description: "Distribution of vendors across risk tiers.",
+  },
+  {
+    id: "vendor-detail",
+    label: "Top vendors",
+    description: "Highest-risk vendors with context.",
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    description: "Assessment volume and reassessment cadence.",
+  },
+  {
+    id: "audit",
+    label: "Audit & compliance",
+    description: "Evidence coverage proxy and documentation status.",
+  },
+];
+
+function normalizeTemplate(raw?: string): BoardTemplateId {
+  const ids = new Set(TEMPLATE_OPTIONS.map((t) => t.id));
+  if (raw && ids.has(raw as BoardTemplateId)) {
+    return raw as BoardTemplateId;
+  }
+  return "executive";
+}
+
+export const dynamic = "force-dynamic";
+
+export default async function BoardReportPage({ searchParams }: PageProps) {
+  const template = normalizeTemplate(searchParams?.template);
+
+  const vendors = await prisma.vendor.findMany({
+    orderBy: { id: "asc" },
+    include: {
+      assessments: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+
+  const totalVendors = vendors.length;
+  const totalAssessments = await prisma.assessment.count();
+
+  const avgRiskScore =
+    totalVendors === 0
+      ? 0
+      : Math.round(
+          vendors.reduce((sum, v) => sum + v.riskScore, 0) / totalVendors
+        );
+
+  const tier = (score: number) => {
+    if (score >= 80) return "critical";
+    if (score >= 60) return "high";
+    if (score >= 40) return "medium";
+    return "low";
+  };
+
+  const lowRisk = vendors.filter((v) => tier(v.riskScore) === "low");
+  const mediumRisk = vendors.filter((v) => tier(v.riskScore) === "medium");
+  const highRisk = vendors.filter((v) => tier(v.riskScore) === "high");
+  const criticalRisk = vendors.filter((v) => tier(v.riskScore) === "critical");
+
+  // Evidence coverage proxy:
+  // treat "vendor has at least one assessment" as "has evidence on file"
+  const vendorsWithAssessments = vendors.filter(
+    (v) => v.assessments.length > 0
+  );
+  const evidenceUploaded = vendorsWithAssessments.length;
+  const evidenceMissing = totalVendors - evidenceUploaded;
+  const evidenceCoverage =
+    totalVendors === 0
+      ? 0
+      : Math.round((evidenceUploaded / totalVendors) * 100);
+
+  // Top 5 highest-risk vendors
+  const topVendors = [...vendors]
+    .sort((a, b) => b.riskScore - a.riskScore)
+    .slice(0, 5);
+
+  // Compute reassessment due dates: 12 months after latest assessment
+  const vendorReassessment = vendors.map((v) => {
+    const latest = v.assessments[0]; // already ordered desc
+    if (!latest) return { vendorId: v.id, nextDue: null as Date | null };
+
+    const created = new Date(latest.createdAt);
+    const next = new Date(created);
+    next.setMonth(next.getMonth() + 12);
+    return { vendorId: v.id, nextDue: next };
+  });
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-slate-50">
+      <section className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+        <header className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-sky-400">
+            Truvern Â· Board Report
+          </p>
+          <h1 className="text-3xl md:text-4xl font-semibold">
+            Third-party risk posture overview
+          </h1>
+          <p className="text-sm md:text-base text-slate-300 max-w-3xl">
+            This report is designed for board and executive stakeholders. It
+            summarizes vendor risk, assessment cadence, and evidence coverage
+            using data from your Truvern environment.
+          </p>
+        </header>
+
+        <TemplateTabs active={template} />
+
+        {template === "executive" && (
+          <ExecutiveTemplate
+            totalVendors={totalVendors}
+            totalAssessments={totalAssessments}
+            avgRiskScore={avgRiskScore}
+            highRiskCount={highRisk.length + criticalRisk.length}
+            evidenceCoverage={evidenceCoverage}
+          />
+        )}
+
+        {template === "risk-matrix" && (
+          <RiskMatrixTemplate
+            low={lowRisk.length}
+            medium={mediumRisk.length}
+            high={highRisk.length}
+            critical={criticalRisk.length}
+          />
+        )}
+
+        {template === "vendor-detail" && (
+          <VendorDetailTemplate
+            vendors={topVendors}
+            reassessment={vendorReassessment}
+          />
+        )}
+
+        {template === "operations" && (
+          <OperationsTemplate
+            totalVendors={totalVendors}
+            totalAssessments={totalAssessments}
+            reassessment={vendorReassessment}
+          />
+        )}
+
+        {template === "audit" && (
+          <AuditTemplate
+            totalVendors={totalVendors}
+            evidenceUploaded={evidenceUploaded}
+            evidenceMissing={evidenceMissing}
+            coverage={evidenceCoverage}
+          />
+        )}
+
+        <footer className="pt-6 border-t border-slate-800 text-xs text-slate-500 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <p>
+            Generated via Truvern Board Report. This view is safe to share with
+            directors and audit committees.
+          </p>
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <span className="rounded-full border border-slate-700 px-3 py-1">
+              Template: {TEMPLATE_OPTIONS.find((t) => t.id === template)?.label}
+            </span>
+            <span className="rounded-full border border-slate-700 px-3 py-1">
+              Vendors: {totalVendors}
+            </span>
+            <span className="rounded-full border border-slate-700 px-3 py-1">
+              Assessments: {totalAssessments}
+            </span>
+          </div>
+        </footer>
+      </section>
+    </main>
+  );
+}
+
+function TemplateTabs({ active }: { active: BoardTemplateId }) {
+  return (
+    <nav className="flex flex-wrap gap-2 text-xs md:text-sm">
+      {TEMPLATE_OPTIONS.map((opt) => {
+        const selected = opt.id === active;
+        const href =
+          opt.id === "executive"
+            ? "/reports/board"
+            : `/reports/board?template=${opt.id}`;
+
+        return (
+          <Link
+            key={opt.id}
+            href={href}
+            className={[
+              "flex flex-col rounded-md border px-3 py-2 min-w-[150px] transition",
+              selected
+                ? "border-sky-500 bg-sky-500/10 text-sky-200"
+                : "border-slate-700 bg-slate-900/40 text-slate-200 hover:border-sky-500/70",
+            ].join(" ")}
+          >
+            <span className="font-medium">{opt.label}</span>
+            <span className="text-[11px] text-slate-400">
+              {opt.description}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-1">
+      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+        {label}
+      </p>
+      <p className="text-2xl font-semibold text-slate-50">{value}</p>
+      {helper && <p className="text-xs text-slate-400">{helper}</p>}
+    </div>
+  );
+}
+
+function ExecutiveTemplate(props: {
+  totalVendors: number;
+  totalAssessments: number;
+  avgRiskScore: number;
+  highRiskCount: number;
+  evidenceCoverage: number;
+}) {
+  const {
+    totalVendors,
+    totalAssessments,
+    avgRiskScore,
+    highRiskCount,
+    evidenceCoverage,
+  } = props;
+
+  return (
+    <section className="space-y-5">
+      <h2 className="text-lg font-semibold">Executive summary</h2>
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Vendors in scope"
+          value={String(totalVendors)}
+          helper="Total active third parties tracked in Truvern."
+        />
+        <StatCard
+          label="Assessments completed"
+          value={String(totalAssessments)}
+          helper="Count of completed assessment records."
+        />
+        <StatCard
+          label="Average risk score"
+          value={String(avgRiskScore)}
+          helper="0 (lowest) to 100 (highest) risk."
+        />
+        <StatCard
+          label="High & critical vendors"
+          value={String(highRiskCount)}
+          helper="Vendors above the high-risk threshold."
+        />
+        <StatCard
+          label="Evidence coverage"
+          value={`${evidenceCoverage}%`}
+          helper="Vendors with at least one assessment (proxy for evidence on file)."
+        />
+        <StatCard
+          label="Report template"
+          value="Executive summary"
+          helper="Use tabs above to switch templates."
+        />
+      </div>
+    </section>
+  );
+}
+
+function RiskRow(props: {
+  label: string;
+  count: number;
+  tone: string;
+  helper: string;
+}) {
+  const { label, count, tone, helper } = props;
+  return (
+    <div className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-slate-100">{label}</p>
+        <p className="text-xs text-slate-400">{helper}</p>
+      </div>
+      <span className={`text-2xl font-semibold ${tone}`}>{count}</span>
+    </div>
+  );
+}
+
+function RiskMatrixTemplate(props: {
+  low: number;
+  medium: number;
+  high: number;
+  critical: number;
+}) {
+  const { low, medium, high, critical } = props;
+  const total = low + medium + high + critical || 1;
+  const pct = (n: number) => Math.round((n / total) * 100);
+
+  return (
+    <section className="space-y-5">
+      <h2 className="text-lg font-semibold">Risk matrix</h2>
+      <div className="grid gap-3 md:grid-cols-2">
+        <RiskRow
+          label="Low risk"
+          count={low}
+          tone="text-emerald-400"
+          helper={`${pct(low)}% of vendors are within low-risk tolerance.`}
+        />
+        <RiskRow
+          label="Medium risk"
+          count={medium}
+          tone="text-sky-300"
+          helper={`${pct(medium)}% of vendors require standard oversight.`}
+        />
+        <RiskRow
+          label="High risk"
+          count={high}
+          tone="text-amber-300"
+          helper={`${pct(high)}% of vendors require additional controls.`}
+        />
+        <RiskRow
+          label="Critical risk"
+          count={critical}
+          tone="text-rose-400"
+          helper={`${pct(critical)}% of vendors fall outside risk appetite and may require executive attention.`}
+        />
+      </div>
+    </section>
+  );
+}
+
+function VendorDetailTemplate(props: {
+  vendors: any[];
+  reassessment: { vendorId: number; nextDue: Date | null }[];
+}) {
+  const { vendors, reassessment } = props;
+
+  const lookup = new Map<number, Date | null>();
+  reassessment.forEach((r) => lookup.set(r.vendorId, r.nextDue));
+
+  return (
+    <section className="space-y-5">
+      <h2 className="text-lg font-semibold">Top 5 highest-risk vendors</h2>
+      {vendors.length === 0 && (
+        <p className="text-sm text-slate-400">
+          No vendors found. Once vendors and assessments are loaded into
+          Truvern, this view will highlight the highest-risk relationships.
+        </p>
+      )}
+      <div className="space-y-3">
+        {vendors.map((v) => {
+          const nextDue = lookup.get(v.id) ?? null;
+          return (
+            <div
+              key={v.id}
+              className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-1"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-50">{v.name}</p>
+                <span className="text-sm text-sky-300">
+                  Risk score: {v.riskScore}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Reassessment due:{" "}
+                {nextDue
+                  ? nextDue.toLocaleDateString()
+                  : "No assessment on file"}
+              </p>
+              <p className="text-xs text-slate-500">
+                Assessments recorded: {v.assessments.length}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function OperationsTemplate(props: {
+  totalVendors: number;
+  totalAssessments: number;
+  reassessment: { vendorId: number; nextDue: Date | null }[];
+}) {
+  const { totalVendors, totalAssessments, reassessment } = props;
+
+  const withDate = reassessment.filter((r) => r.nextDue !== null);
+  const dueSoon = withDate.filter((r) => {
+    const now = new Date();
+    const in90 = new Date();
+    in90.setDate(now.getDate() + 90);
+    return r.nextDue! <= in90;
+  });
+
+  return (
+    <section className="space-y-5">
+      <h2 className="text-lg font-semibold">Operational cadence</h2>
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Active vendors"
+          value={String(totalVendors)}
+          helper="Third parties currently tracked."
+        />
+        <StatCard
+          label="Assessments in system"
+          value={String(totalAssessments)}
+          helper="Total assessment records stored."
+        />
+        <StatCard
+          label="Reassessments due in 90 days"
+          value={String(dueSoon.length)}
+          helper="Vendors scheduled for near-term follow-up."
+        />
+      </div>
+    </section>
+  );
+}
+
+function AuditTemplate(props: {
+  totalVendors: number;
+  evidenceUploaded: number;
+  evidenceMissing: number;
+  coverage: number;
+}) {
+  const { totalVendors, evidenceUploaded, evidenceMissing, coverage } = props;
+
+  return (
+    <section className="space-y-5">
+      <h2 className="text-lg font-semibold">Audit & compliance view</h2>
+      <p className="text-sm text-slate-300 max-w-3xl">
+        This view uses a simple proxy for evidence coverage: a vendor is
+        considered to have evidence on file if at least one assessment exists.
+        As you onboard more structured evidence objects, this view can be
+        expanded to show control-level coverage.
+      </p>
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Vendors with evidence"
+          value={`${evidenceUploaded}/${totalVendors || 0}`}
+          helper="Vendors with at least one assessment record."
+        />
+        <StatCard
+          label="Vendors missing evidence"
+          value={String(Math.max(evidenceMissing, 0))}
+          helper="Vendors with no assessments on file."
+        />
+        <StatCard
+          label="Coverage rate"
+          value={`${coverage}%`}
+          helper="Target 90%+ for mature programs."
+        />
+      </div>
+    </section>
+  );
+}

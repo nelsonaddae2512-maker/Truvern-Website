@@ -1,0 +1,131 @@
+﻿"use client";
+
+import { useSearchParams, useRouter } from "next/navigation";
+import { useState, FormEvent } from "react";
+import Link from "next/link";
+
+export default function VendorEvidenceUploadPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const vendorId = searchParams.get("vendorId") || "";
+  const [status, setStatus] = useState("idle");
+  const [message, setMessage] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+
+    if (!vendorId) {
+      setStatus("error");
+      setMessage("Vendor ID missing.");
+      return;
+    }
+
+    data.set("vendorId", vendorId);
+
+    setStatus("uploading");
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/evidence/upload", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      setStatus("success");
+      setMessage("Evidence uploaded successfully.");
+      form.reset();
+
+    } catch (err) {
+      setStatus("error");
+      setMessage(err.message || "Upload failed");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-slate-50">
+      <section className="max-w-3xl mx-auto px-4 py-10 space-y-8">
+
+        <div>
+          <p className="text-xs uppercase tracking-widest text-sky-400">
+            Vendor Evidence Workspace
+          </p>
+          <h1 className="text-2xl font-semibold">Upload Evidence</h1>
+          <p className="text-sm text-slate-300 mt-1">
+            Use this screen to upload SOC reports, pentest results, policies, and other supporting documents.
+          </p>
+        </div>
+
+        <div className="border border-slate-700 rounded-lg p-6 bg-slate-900/60 space-y-6">
+
+          <div>
+            <p className="text-xs text-slate-400">Vendor ID</p>
+            <p className="text-sm font-mono text-sky-300">{vendorId || "None"}</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <div>
+              <label className="text-xs block mb-1">Evidence Type</label>
+              <select
+                name="evidenceType"
+                required
+                className="w-full bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-sm"
+              >
+                <option value="">Select...</option>
+                <option value="soc2">SOC 2 or Assurance</option>
+                <option value="pentest">Penetration Test</option>
+                <option value="policy">Policy Documents</option>
+                <option value="bcp-dr">BCP / DR Plan</option>
+                <option value="privacy">Privacy Docs</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs block mb-1">Description</label>
+              <input
+                name="description"
+                type="text"
+                placeholder="Example: SOC 2 Type II Report"
+                className="w-full bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs block mb-1">Evidence File</label>
+              <input
+                name="file"
+                type="file"
+                required
+                className="w-full bg-slate-950 border border-slate-700 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+
+            {status !== "idle" && (
+              <div className="text-xs border border-slate-700 rounded-md p-2">
+                {status === "uploading" && <p className="text-sky-300">Uploading...</p>}
+                {status === "success" && <p className="text-emerald-300">{message}</p>}
+                {status === "error" && <p className="text-rose-300">{message}</p>}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="px-4 py-2 bg-sky-500 text-slate-950 font-semibold rounded-md text-sm"
+            >
+              Upload Evidence
+            </button>
+
+          </form>
+
+        </div>
+
+      </section>
+    </main>
+  );
+}

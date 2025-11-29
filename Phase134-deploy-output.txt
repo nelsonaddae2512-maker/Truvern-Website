@@ -1,0 +1,13 @@
+Vercel CLI 48.9.0
+Retrieving project…
+Deploying nelson-ai-projects/truvern
+Uploading [--------------------] (0.0B/32.9KB)
+Uploading [=======-------------] (11.5KB/32.9KB)
+Uploading [===========---------] (19.2KB/32.9KB)
+Uploading [================----] (27.2KB/32.9KB)
+Uploading [====================] (32.9KB/32.9KB)
+Inspect: https://vercel.com/nelson-ai-projects/truvern/6YUTFnFFPxpkGXNXkEy4ygV2FvD9 [3s]
+Production: https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.app [3s]
+https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.appQueued
+Building
+Completing

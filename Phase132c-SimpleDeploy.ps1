@@ -1,0 +1,190 @@
+<# 
+    Phase132-Deploy-Prebuilt.ps1
+    -----------------------------------------
+    - Ensures we are running from the project directory (not System32)
+    - Optionally pulls prod env from Vercel (vercel pull --environment=production)
+    - Runs pnpm install --no-frozen-lockfile to update pnpm-lock.yaml
+    - Runs a local production build:      vercel build
+    - Deploys the prebuilt output:        vercel deploy --prebuilt --prod --yes
+    - Logs all output to .\logs\Phase132-Deploy-Prebuilt-YYYYMMDD-HHMMSS.log
+    - Uses SAFE transcript handling
+#>
+
+param(
+    [string]$ProjectDir = $PSScriptRoot
+)
+
+$ErrorActionPreference = "Stop"
+
+# -----------------------------
+# 1) Normalise working directory
+# -----------------------------
+try {
+    if (-not $ProjectDir -or $ProjectDir -eq "") {
+        $ProjectDir = $PSScriptRoot
+    }
+
+    $projectPath = Resolve-Path -Path $ProjectDir
+} catch {
+    Write-Host "[ERROR] Unable to resolve ProjectDir '$ProjectDir'." -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    exit 1
+}
+
+if ($PWD.Path -like "*Windows\System32*") {
+    Write-Host "[INFO] Detected System32. Switching to project directory: $projectPath" -ForegroundColor Yellow
+    Set-Location $projectPath
+} else {
+    Write-Host "[INFO] Current directory: $($PWD.Path)" -ForegroundColor Cyan
+    Write-Host "[INFO] Project directory: $projectPath" -ForegroundColor Cyan
+    Set-Location $projectPath
+}
+
+# -----------------------------
+# 2) Setup logging (safe transcript)
+# -----------------------------
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$logDir    = Join-Path $projectPath "logs"
+$logFile   = Join-Path $logDir "Phase132-Deploy-Prebuilt-$timestamp.log"
+
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+
+# Safe transcript start
+try {
+    $hostType = $Host.GetType()
+    $transcriptField = $hostType.GetField("_transcript", "NonPublic,Instance")
+    if ($transcriptField) {
+        $activeTranscript = $transcriptField.GetValue($Host)
+        if ($activeTranscript) {
+            try { Stop-Transcript | Out-Null } catch {}
+        }
+    }
+} catch {}
+
+try {
+    Start-Transcript -Path $logFile -Force | Out-Null
+    Write-Host "[INFO] Logging to $logFile" -ForegroundColor Green
+} catch {
+    Write-Host "[WARN] Transcript could not be started. Continuing without transcript logging." -ForegroundColor Yellow
+}
+
+try {
+    Write-Host ""
+    Write-Host "=== Phase132: Deploy Prebuilt Build ===" -ForegroundColor Magenta
+    Write-Host ""
+
+    # -----------------------------
+    # 3) Quick sanity checks
+    # -----------------------------
+    Write-Host "[INFO] Node & Vercel versions:" -ForegroundColor Cyan
+    try { node -v } catch { Write-Host "[WARN] 'node' not found on PATH. Build may fail." -ForegroundColor Yellow }
+
+    try { vercel --version } catch {
+        Write-Host "[ERROR] 'vercel' CLI not found. Install with 'npm i -g vercel' and retry." -ForegroundColor Red
+        throw
+    }
+
+    Write-Host "[INFO] Checking Vercel authentication..." -ForegroundColor Cyan
+    try { vercel whoami } catch {
+        Write-Host "[ERROR] Not logged into Vercel. Run 'vercel login' once, then re-run this script." -ForegroundColor Red
+        throw
+    }
+
+    # -----------------------------
+    # 4) Pull prod env (optional)
+    # -----------------------------
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor DarkCyan
+    Write-Host "[STEP] vercel pull --environment=production" -ForegroundColor DarkCyan
+    Write-Host "============================================" -ForegroundColor DarkCyan
+
+    try {
+        vercel pull --environment=production --yes
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[WARN] vercel pull returned exit code $LASTEXITCODE. Continuing anyway..." -ForegroundColor Yellow
+        } else {
+            Write-Host "[INFO] vercel pull completed." -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "[WARN] vercel pull failed, but this is non-fatal for deployment." -ForegroundColor Yellow
+    }
+
+    # -----------------------------
+    # 5) pnpm install --no-frozen-lockfile
+    #     (fixes ERR_PNPM_OUTDATED_LOCKFILE)
+    # -----------------------------
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor DarkCyan
+    Write-Host "[STEP] pnpm install --no-frozen-lockfile" -ForegroundColor DarkCyan
+    Write-Host "============================================" -ForegroundColor DarkCyan
+
+    try {
+        # Ensure pnpm exists
+        $pnpmCmd = Get-Command pnpm -ErrorAction SilentlyContinue
+        if (-not $pnpmCmd) {
+            Write-Host "[ERROR] 'pnpm' is not installed or not on PATH. Install with 'npm i -g pnpm' and rerun." -ForegroundColor Red
+            throw "pnpm not found"
+        }
+
+        pnpm install --no-frozen-lockfile
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] pnpm install failed with exit code $LASTEXITCODE." -ForegroundColor Red
+            throw "pnpm install failed"
+        }
+
+        Write-Host "[INFO] pnpm-lock.yaml updated successfully." -ForegroundColor Green
+    } catch {
+        Write-Host "[FATAL] pnpm install step failed:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        throw
+    }
+
+    # -----------------------------
+    # 6) Build (NO --prebuilt flag)
+    # -----------------------------
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor DarkCyan
+    Write-Host "[STEP] vercel build" -ForegroundColor DarkCyan
+    Write-Host "============================================" -ForegroundColor DarkCyan
+
+    vercel build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] vercel build failed with exit code $LASTEXITCODE." -ForegroundColor Red
+        throw "vercel build failed"
+    }
+
+    Write-Host "[INFO] vercel build completed successfully." -ForegroundColor Green
+
+    # -----------------------------
+    # 7) Deploy prebuilt output
+    # -----------------------------
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor DarkCyan
+    Write-Host "[STEP] vercel deploy --prebuilt --prod --yes" -ForegroundColor DarkCyan
+    Write-Host "============================================" -ForegroundColor DarkCyan
+
+    vercel deploy --prebuilt --prod --yes
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] vercel deploy failed with exit code $LASTEXITCODE." -ForegroundColor Red
+        throw "vercel deploy failed"
+    }
+
+    Write-Host ""
+    Write-Host "✅ Phase132-Deploy-Prebuilt completed successfully." -ForegroundColor Green
+    Write-Host "   - pnpm-lock.yaml updated" -ForegroundColor Green
+    Write-Host "   - Local build: SUCCESS" -ForegroundColor Green
+    Write-Host "   - Prebuilt deploy: SUCCESS" -ForegroundColor Green
+}
+catch {
+    Write-Host ""
+    Write-Host "[FATAL] Phase132-Deploy-Prebuilt encountered an error:" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host "See log file for details (if transcript started successfully): $logFile" -ForegroundColor Yellow
+    try { Stop-Transcript | Out-Null } catch {}
+    exit 1
+}
+
+try { Stop-Transcript | Out-Null } catch {}
+exit 0

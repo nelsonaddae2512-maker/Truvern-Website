@@ -1,6 +1,7 @@
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from '@sentry/nextjs';
+
 Sentry.init({
   dsn: process.env.SENTRY_DSN || undefined,
+  environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
   tracesSampleRate: 0.2,
-  integrations: [],
 });

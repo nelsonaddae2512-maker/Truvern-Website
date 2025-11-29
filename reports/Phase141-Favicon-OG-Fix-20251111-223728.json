@@ -1,0 +1,23 @@
+﻿{
+    "Phase":  "Phase141-Favicon-OG-Fix-Safe",
+    "Timestamp":  "2025-11-11T22:40:17",
+    "Base":  "https://truvern.com",
+    "Files":  {
+                  "OpenGraph":  "C:\\Users\\MR.NELSON\\Downloads\\truvern\\public\\opengraph-image.png",
+                  "Favicon":  "C:\\Users\\MR.NELSON\\Downloads\\truvern\\public\\favicon.ico"
+              },
+    "Results":  [
+                    {
+                        "Endpoint":  "/favicon.ico",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  286
+                    },
+                    {
+                        "Endpoint":  "/opengraph-image.png",
+                        "Status":  200,
+                        "OK":  true,
+                        "TookMs":  83
+                    }
+                ]
+}

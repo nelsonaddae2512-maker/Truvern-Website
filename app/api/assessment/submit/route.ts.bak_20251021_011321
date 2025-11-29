@@ -1,3 +1,4 @@
+﻿export const runtime = 'nodejs';
 import prisma from "@/lib/db";
 
 import { NextResponse } from 'next/server'
@@ -19,4 +20,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'SUBMIT_FAILED' }, { status: 500 })
   }
 }
+
 

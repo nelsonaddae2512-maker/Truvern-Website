@@ -1,5 +1,9 @@
 import type { NextAuthOptions } from 'next-auth'
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
+// BEFORE
+// import { PrismaAdapter } from '@next-auth/prisma-adapter';
+
+// AFTER
+import { PrismaAdapter } from '@auth/prisma-adapter';
 import prisma from '@/lib/db'
 
 // Minimal default: add real providers later if needed

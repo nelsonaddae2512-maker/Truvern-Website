@@ -1,0 +1,55 @@
+﻿{
+    "Phase":  "Phase137-Postfix-CachePurge",
+    "Base":  "https://truvern.com",
+    "Timestamp":  "2025-11-11T22:23:14",
+    "Results":  [
+                    {
+                        "Url":  "https://truvern.com/\u0026v=4d96636dab3f492cb4fc1fb0f19f6ab6",
+                        "Endpoint":  "/",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  53,
+                        "Error":  "The remote server returned an error: (404) Not Found.",
+                        "Timestamp":  "2025-11-11T22:23:06"
+                    },
+                    {
+                        "Url":  "https://truvern.com/api/health\u0026v=0b9cd0f4ba104684aea40b798161855e",
+                        "Endpoint":  "/api/health",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  58,
+                        "Error":  "The remote server returned an error: (404) Not Found.",
+                        "Timestamp":  "2025-11-11T22:23:08"
+                    },
+                    {
+                        "Url":  "https://truvern.com/trust-network\u0026v=db1b384082874edc98fdea51c3427323",
+                        "Endpoint":  "/trust-network",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  60,
+                        "Error":  "The remote server returned an error: (404) Not Found.",
+                        "Timestamp":  "2025-11-11T22:23:10"
+                    },
+                    {
+                        "Url":  "https://truvern.com/reports/board\u0026v=c96fcc28b19a408c9227935fa57b1e87",
+                        "Endpoint":  "/reports/board",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  46,
+                        "Error":  "The remote server returned an error: (404) Not Found.",
+                        "Timestamp":  "2025-11-11T22:23:12"
+                    },
+                    {
+                        "Url":  "https://truvern.com/vendors\u0026v=fb0b9c9e923c46ca84ff1c75748149a1",
+                        "Endpoint":  "/vendors",
+                        "Status":  0,
+                        "OK":  false,
+                        "TookMs":  40,
+                        "Error":  "The remote server returned an error: (404) Not Found.",
+                        "Timestamp":  "2025-11-11T22:23:14"
+                    }
+                ],
+    "Artifacts":  {
+
+                  }
+}

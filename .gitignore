@@ -28,3 +28,6 @@ Thumbs.db
 *.gz
 .vercel
 .env*.local
+logs/
+scripts/logs/
+

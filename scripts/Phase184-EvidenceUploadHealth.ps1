@@ -38,8 +38,8 @@ Write-Log "Current Directory: $(Get-Location)" "Green"
 # ------------------------------------------------------------------
 # Configure base URLs
 # ------------------------------------------------------------------
-$prodBase = "https://truvern.com"
-$vercelBase = ""   # e.g. "https://truvern-xxxx-nelson-ai-projects.vercel.app" if you want to include it
+$prodBase   = "https://truvern.com"
+$vercelBase = "https://truvern-cazumgt0t-nelson-ai-projects.vercel.app"
 
 # Upload-related routes to check
 $routes = @(

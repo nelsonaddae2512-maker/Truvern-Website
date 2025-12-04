@@ -1,107 +1,171 @@
-// app/vendors/page.tsx
+// app/vendors/[id]/page.tsx
+import prisma from "@/lib/prisma";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 
-type VendorRow = {
-  id: number;
-  name: string;
-  riskScore: number | null;
+type PageProps = {
+  params: {
+    id: string;
+  };
 };
 
-export const metadata = {
-  title: "Vendors | Truvern",
-  description: "Active vendors in your Truvern TPRM network.",
-};
+export default async function VendorDetailPage({ params }: PageProps) {
+  const vendorId = Number(params.id);
 
-export default async function VendorsPage() {
-  let vendors: VendorRow[] = [];
-  let loadError: string | null = null;
-
-  try {
-    vendors = await prisma.vendor.findMany({
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        riskScore: true,
-      },
-    });
-  } catch (err: any) {
-    // Log full error to Vercel runtime logs
-    console.error("[/vendors] VENDORS_PAGE_ERROR:", err);
-    loadError = err?.message ?? "Unknown error loading vendors";
-  }
-
-  // If something went wrong, render a friendly message instead of throwing.
-  if (loadError) {
+  if (Number.isNaN(vendorId)) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
-        <h1 className="text-2xl font-semibold mb-3">Vendors</h1>
-        <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-4">
-          <p className="text-sm font-medium text-red-300">
-            We couldn&apos;t load your vendors right now.
-          </p>
-          <p className="mt-2 text-xs text-red-200/80">
-            Technical detail: {loadError}
-          </p>
-        </div>
-        <p className="mt-6 text-sm text-slate-400">
-          Try again in a moment, or return to the{" "}
-          <Link href="/" className="text-emerald-400 hover:underline">
-            home page
-          </Link>
-          .
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Vendor not found</h1>
+        <p className="mb-4 text-gray-400">
+          The vendor id in the URL is not valid.
         </p>
+        <Link href="/vendors" className="text-emerald-400 underline">
+          Back to vendors
+        </Link>
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-12 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Vendors</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Active vendors in your Truvern TPRM network.
-        </p>
-      </div>
+  const vendor = await prisma.vendor.findUnique({
+    where: { id: vendorId },
+    include: {
+      evidence: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
 
-      {vendors.length === 0 ? (
-        <p className="text-sm text-slate-400">
-          No vendors found yet. Seed some vendors in the database to get
-          started.
+  if (!vendor) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Vendor not found</h1>
+        <p className="mb-4 text-gray-400">
+          We couldn&apos;t find a vendor with id {vendorId}.
         </p>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-900/70 text-xs uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="px-4 py-2 text-left">Name</th>
-                <th className="px-4 py-2 text-right">Risk score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vendors.map((v) => (
-                <tr
-                  key={v.id}
-                  className="border-t border-slate-800 hover:bg-slate-900/70"
-                >
-                  <td className="px-4 py-2">
-                    <Link
-                      href={`/vendors/${v.id}`}
-                      className="text-emerald-400 hover:underline"
-                    >
-                      {v.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-right text-slate-200">
-                    {v.riskScore ?? "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <Link href="/vendors" className="text-emerald-400 underline">
+          Back to vendors
+        </Link>
+      </div>
+    );
+  }
+
+  const riskScore =
+    vendor.riskScore !== null && vendor.riskScore !== undefined
+      ? vendor.riskScore
+      : "—";
+
+  return (
+    <div className="p-6 space-y-8">
+      {/* Header / summary */}
+      <header className="space-y-2">
+        <p className="text-sm text-emerald-400 uppercase tracking-wide">
+          Vendor profile
+        </p>
+        <h1 className="text-3xl font-bold">{vendor.name}</h1>
+        <p className="text-sm text-gray-400">
+          Active vendor in your Truvern TPRM network.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-4">
+          <div className="rounded-lg border border-emerald-500/40 bg-black/30 px-4 py-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide">
+              Risk score
+            </p>
+            <p className="text-2xl font-semibold text-emerald-400">
+              {riskScore}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-700 bg-black/30 px-4 py-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide">
+              Vendor ID
+            </p>
+            <p className="text-lg font-mono text-gray-200">#{vendor.id}</p>
+          </div>
+          <div className="rounded-lg border border-gray-700 bg-black/30 px-4 py-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide">
+              Created
+            </p>
+            <p className="text-sm text-gray-200">
+              {new Date(vendor.createdAt).toLocaleString()}
+            </p>
+          </div>
         </div>
-      )}
+
+        <div className="mt-4">
+          <Link href="/vendors" className="text-emerald-400 underline text-sm">
+            ← Back to vendors
+          </Link>
+        </div>
+      </header>
+
+      {/* Evidence panel */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Evidence</h2>
+          <span className="text-xs text-gray-400">
+            {vendor.evidence.length} item
+            {vendor.evidence.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {vendor.evidence.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            No evidence uploaded for this vendor yet.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-gray-800 bg-black/40">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-900/70">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400">
+                    Title
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400">
+                    Description
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400">
+                    Added
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-400">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendor.evidence.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-t border-gray-800 hover:bg-gray-900/50"
+                  >
+                    <td className="px-4 py-3 align-top font-medium text-gray-100">
+                      {item.title ?? `Evidence #${item.id}`}
+                    </td>
+                    <td className="px-4 py-3 align-top text-gray-400">
+                      {item.description ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 align-top text-gray-400 whitespace-nowrap">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 align-top text-right">
+                      {item.fileUrl ? (
+                        <a
+                          href={item.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-400 hover:text-emerald-300 underline text-sm"
+                        >
+                          View / download
+                        </a>
+                      ) : (
+                        <span className="text-gray-500 text-xs">No file</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

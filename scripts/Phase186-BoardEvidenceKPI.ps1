@@ -1,4 +1,57 @@
-﻿import prisma from "@/lib/prisma";
+# ==============================================
+# Phase186 - Board Evidence KPIs & Vendor Table
+# ==============================================
+
+param()
+
+$projectRoot = "C:\Users\MR.NELSON\Downloads\truvern"
+$logDir      = "$projectRoot\scripts\logs"
+$timestamp   = Get-Date -Format "yyyyMMdd-HHmmss"
+$logFile     = "$logDir\phase186-board-evidence-kpi-$timestamp.log"
+
+if (-not (Test-Path $logDir)) {
+    New-Item -Path $logDir -ItemType Directory -Force | Out-Null
+}
+
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Color = "Cyan"
+    )
+    Write-Host $Message -ForegroundColor $Color
+    Add-Content -Path $logFile -Value ("[{0}] {1}" -f (Get-Date), $Message)
+}
+
+Write-Log "===== Phase186: Board Evidence KPI START =====" "Yellow"
+
+# ------------------------------------------------------------------
+# Ensure correct working directory (never run from system32)
+# ------------------------------------------------------------------
+if ((Get-Location).Path -ne $projectRoot) {
+    Write-Log "Switching to project root: $projectRoot" "Green"
+    Set-Location $projectRoot
+}
+
+Write-Log "Current Directory: $(Get-Location)" "Green"
+
+# ------------------------------------------------------------------
+# Ensure board report directory exists
+# ------------------------------------------------------------------
+$boardDir  = Join-Path $projectRoot "app\reports\board"
+$boardFile = Join-Path $boardDir "page.tsx"
+
+if (-not (Test-Path $boardDir)) {
+    Write-Log "Creating board report directory: $boardDir" "Yellow"
+    New-Item -Path $boardDir -ItemType Directory -Force | Out-Null
+}
+
+# ------------------------------------------------------------------
+# Write board report page with evidence KPIs
+# ------------------------------------------------------------------
+Write-Log "Writing board report page: $boardFile" "Yellow"
+
+@'
+import prisma from "@/lib/prisma";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -105,7 +158,7 @@ export default async function BoardReportPage() {
                       </Link>
                     </td>
                     <td className="px-6 py-3">
-                      {v.riskScore !== null ? v.riskScore : "â€”"}
+                      {v.riskScore !== null ? v.riskScore : "—"}
                     </td>
                     <td className="px-6 py-3">
                       <span className="inline-flex items-center rounded-full border border-slate-700 px-2.5 py-1 text-xs font-medium">
@@ -135,3 +188,31 @@ export default async function BoardReportPage() {
     </div>
   );
 }
+'@ | Set-Content -Path $boardFile -Encoding UTF8
+
+Write-Log "Board report page written." "Green"
+
+# ------------------------------------------------------------------
+# Git add / commit / push
+# ------------------------------------------------------------------
+Write-Log "Staging board report + Phase186 script..." "Yellow"
+git add "app/reports/board/page.tsx" "scripts/Phase186-BoardEvidenceKPI.ps1"
+
+Write-Log "Creating commit..." "Yellow"
+git commit -m "Phase186: add evidence KPIs to board report" | Tee-Object -FilePath $logFile -Append
+
+Write-Log "Pushing to origin/main..." "Yellow"
+git push | Tee-Object -FilePath $logFile -Append
+
+# ------------------------------------------------------------------
+# Re-run Phase180 health check
+# ------------------------------------------------------------------
+$healthScript = Join-Path $projectRoot "scripts\Phase180-RouteHealthCheck.ps1"
+if (Test-Path $healthScript) {
+    Write-Log "Running Phase180 route health check..." "Yellow"
+    & $healthScript
+} else {
+    Write-Log "Phase180 health script not found at $healthScript - skipping health check." "Red"
+}
+
+Write-Log "===== Phase186: Board Evidence KPI COMPLETE =====" "Yellow"

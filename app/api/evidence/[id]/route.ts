@@ -1,42 +1,51 @@
 // app/api/evidence/[id]/route.ts
-// Safe stub: keeps API alive without touching Prisma.
-// Your UI now uses fileUrl directly for downloads, so this
-// endpoint is only for diagnostics / future expansion.
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-import { NextResponse } from 'next/server';
-
-export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
-
-type RouteContext = {
-  params: {
-    id: string;
-  };
+type RouteParams = {
+  params: { id: string };
 };
 
-export async function GET(_req: Request, { params }: RouteContext) {
-  const id = params.id ?? '';
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  try {
+    const idParam = params.id;
+    const evidenceId = Number(idParam);
 
-  if (!/^[0-9]+$/.test(id)) {
+    if (!idParam || Number.isNaN(evidenceId)) {
+      return NextResponse.json(
+        { error: "Valid evidence ID is required." },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.evidence.findUnique({
+      where: { id: evidenceId },
+      select: { id: true, deletedAt: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Evidence not found." },
+        { status: 404 }
+      );
+    }
+
+    // Soft delete
+    await prisma.evidence.update({
+      where: { id: evidenceId },
+      data: { deletedAt: new Date() },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (err: any) {
+    console.error("Error deleting evidence:", err);
     return NextResponse.json(
       {
-        ok: false,
-        error: 'Invalid evidence id',
-        id,
+        error:
+          err?.message ??
+          "Unexpected error while deleting evidence. Check server logs.",
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
-
-  // For now we just return a simple stub response.
-  // Real evidence metadata is loaded elsewhere (e.g. from vendor detail page).
-  return NextResponse.json(
-    {
-      ok: true,
-      id: Number(id),
-      message:
-        'Evidence API stub is alive. Downloads are served via fileUrl on the vendor page.',
-    },
-    { status: 200 }
-  );
 }

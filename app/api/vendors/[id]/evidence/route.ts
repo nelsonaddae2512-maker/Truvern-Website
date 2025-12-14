@@ -1,28 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
-interface RouteParams {
-  params: { id: string };
-}
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    // On your Next version params is a Promise
+    const { id } = await context.params;
 
-export async function GET(_req: NextRequest, { params }: RouteParams) {
-  const vendorId = Number(params.id);
-  if (!Number.isInteger(vendorId)) {
-    return NextResponse.json({ error: "Invalid vendor id" }, { status: 400 });
+    const evidenceId = Number(id);
+
+    if (!id || Number.isNaN(evidenceId)) {
+      return NextResponse.json(
+        { error: "Valid evidence ID is required." },
+        { status: 400 }
+      );
+    }
+
+    // Simple hard delete for now
+    await prisma.evidence.delete({
+      where: { id: evidenceId },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error: any) {
+    console.error("Error deleting evidence:", error);
+    return NextResponse.json(
+      {
+        error:
+          error?.message ||
+          "Failed to delete evidence. Make sure it still exists.",
+      },
+      { status: 500 }
+    );
   }
-
-  const evidence = await prisma.evidence.findMany({
-    where: { vendorId },
-    orderBy: { uploadedAt: "desc" },
-    select: {
-      id: true,
-      filename: true,
-      mimeType: true,
-      size: true,
-      uploadedAt: true,
-      notes: true,
-    },
-  });
-
-  return NextResponse.json(evidence, { status: 200 });
 }

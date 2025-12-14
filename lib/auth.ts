@@ -1,18 +1,19 @@
-import type { NextAuthOptions } from 'next-auth'
-// BEFORE
-// import { PrismaAdapter } from '@next-auth/prisma-adapter';
+// lib/auth.ts
+import type { NextAuthOptions } from "next-auth";
 
-// AFTER
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import prisma from '@/lib/db'
-
-// Minimal default: add real providers later if needed
+/**
+ * Minimal authOptions stub. You can wire real providers later.
+ */
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
   providers: [],
-  session: { strategy: 'jwt' },
-}
+  session: {
+    strategy: "jwt",
+  },
+  callbacks: {
+    async session({ session }) {
+      return session;
+    },
+  },
+};
 
-export default authOptions
-
-
+export default authOptions;

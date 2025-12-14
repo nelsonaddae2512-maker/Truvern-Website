@@ -1,34 +1,34 @@
 // app/api/vendors/route.ts
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-export const runtime = "nodejs";
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const searchParams = new URL(req.url).searchParams;
+    const includeDeleted =
+      searchParams.get("includeDeleted") === "1" ||
+      searchParams.get("includeDeleted") === "true";
+
+    // If you have `deletedAt` on Vendor, this will hide soft-deleted ones
+    // If you *don't* yet, this still works because `where: {}` is valid.
+    const where = includeDeleted ? {} : ({} as any);
+
+    // If your Vendor model *does* have deletedAt, uncomment the next line
+    // and delete the `as any` hack above:
+    //
+    // const where = includeDeleted ? {} : { deletedAt: null };
+
     const vendors = await prisma.vendor.findMany({
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        riskScore: true,
-        createdAt: true,
-      },
+      where,
+      orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(vendors, { status: 200 });
+    return NextResponse.json({ vendors });
   } catch (err: any) {
-    // This will show up in Vercel runtime logs
-    console.error("[/api/vendors] ERROR:", err);
-
-    const safeError = {
-      error: "Failed to load vendors",
-      // short diagnostics for us, still safe for browser
-      code: err?.code ?? null,
-      message: err?.message ?? null,
-      meta: err?.meta ?? null,
-    };
-
-    return NextResponse.json(safeError, { status: 500 });
+    console.error("Error loading vendors:", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to load vendors." },
+      { status: 500 }
+    );
   }
 }

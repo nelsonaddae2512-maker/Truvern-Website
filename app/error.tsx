@@ -1,13 +1,35 @@
-﻿"use client";
+﻿// app/error.tsx
+"use client";
 
-import { ensureArray } from '@/app/lib/safe';
-export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+export default function ErrorBoundary({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  console.error(error);
+
   return (
-    <html><body style={{padding:24}}>
-      <h1>Something went wrong</h1>
-      <p>{error?.message ?? "Unexpected error"}</p>
-      <a href="/">Back home</a>
-    </body></html>
+    <div className="truvern-shell">
+      <h1 className="truvern-page-heading">Something went wrong</h1>
+      <p className="truvern-page-subheading">
+        {error?.message ?? "Unexpected error"}
+      </p>
+
+      <div className="mt-4 flex gap-3">
+        <button
+          type="button"
+          onClick={() => reset()}
+          className="btn-primary"
+        >
+          Try again
+        </button>
+
+        <a href="/" className="btn-outline">
+          Back home
+        </a>
+      </div>
+    </div>
   );
 }
-

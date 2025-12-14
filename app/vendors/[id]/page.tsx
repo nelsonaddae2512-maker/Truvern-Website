@@ -1,171 +1,354 @@
 // app/vendors/[id]/page.tsx
-import prisma from "@/lib/prisma";
 import Link from "next/link";
+import prisma from "@/lib/prisma";
+import VendorEvidenceTimeline from "@/components/vendor-evidence-timeline";
+import BoardPacketCTA from "@/components/board-packet-cta";
 
-type PageProps = {
-  params: {
-    id: string;
-  };
+type ParamsPromise = Promise<{ id: string }>;
+type SearchParamsPromise = Promise<{ as?: string }>;
+
+type Props = {
+  params: ParamsPromise;
+  searchParams?: SearchParamsPromise;
 };
 
-export default async function VendorDetailPage({ params }: PageProps) {
-  const vendorId = Number(params.id);
+function riskTone(score: number | null | undefined): string {
+  if (score == null) return "bg-slate-800 text-slate-200 border-slate-700";
+  if (score >= 85)
+    return "bg-emerald-500/10 text-emerald-300 border-emerald-500/60";
+  if (score >= 70) return "bg-cyan-500/10 text-cyan-300 border-cyan-500/60";
+  if (score >= 50)
+    return "bg-amber-500/10 text-amber-300 border-amber-500/60";
+  return "bg-rose-500/10 text-rose-300 border-rose-500/60";
+}
 
-  if (Number.isNaN(vendorId)) {
+function riskLabel(score: number | null | undefined): string {
+  if (score == null) return "Not scored";
+  if (score >= 85) return `Low risk (${score})`;
+  if (score >= 70) return `Moderate (${score})`;
+  if (score >= 50) return `Elevated (${score})`;
+  return `High risk (${score})`;
+}
+
+function chip(text: string | null | undefined) {
+  if (!text) return null;
+  return (
+    <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[10px] text-slate-300">
+      {text}
+    </span>
+  );
+}
+
+function issueTone(count: number) {
+  if (count >= 10) return "bg-rose-500/10 text-rose-200 border-rose-500/30";
+  if (count >= 4) return "bg-amber-500/10 text-amber-200 border-amber-500/30";
+  if (count >= 1) return "bg-sky-500/10 text-sky-200 border-sky-500/30";
+  return "bg-slate-900/70 text-slate-300 border-slate-700";
+}
+
+export default async function VendorDetailPage({ params, searchParams }: Props) {
+  const { id } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const asVendor = sp?.as === "vendor";
+
+  const vendorId = Number(id);
+
+  if (!vendorId || Number.isNaN(vendorId)) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Vendor not found</h1>
-        <p className="mb-4 text-gray-400">
-          The vendor id in the URL is not valid.
+      <main className="max-w-3xl mx-auto px-4 py-12">
+        <p className="text-sm text-rose-300">
+          Invalid vendor id in URL. Please return to your vendor list.
         </p>
-        <Link href="/vendors" className="text-emerald-400 underline">
-          Back to vendors
-        </Link>
-      </div>
+      </main>
     );
   }
 
   const vendor = await prisma.vendor.findUnique({
     where: { id: vendorId },
     include: {
-      evidence: {
+      organization: true,
+      trustProfile: true,
+      evidence: true,
+      issues: true,
+      assessments: {
         orderBy: { createdAt: "desc" },
+        include: { template: true },
       },
     },
   });
 
   if (!vendor) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Vendor not found</h1>
-        <p className="mb-4 text-gray-400">
-          We couldn&apos;t find a vendor with id {vendorId}.
+      <main className="max-w-3xl mx-auto px-4 py-12">
+        <p className="text-sm text-rose-300">
+          Vendor not found. Please return to your vendor list.
         </p>
-        <Link href="/vendors" className="text-emerald-400 underline">
-          Back to vendors
-        </Link>
-      </div>
+      </main>
     );
   }
 
-  const riskScore =
-    vendor.riskScore !== null && vendor.riskScore !== undefined
-      ? vendor.riskScore
-      : "—";
+  const assessmentCount = vendor.assessments.length;
+  const evidenceCount = vendor.evidence.length;
+  const openIssues = vendor.issues.filter((i) => i.status !== "RESOLVED").length;
+  const criticalOpen = vendor.issues.filter(
+    (i) => i.status !== "RESOLVED" && i.severity === "CRITICAL"
+  ).length;
 
   return (
-    <div className="p-6 space-y-8">
-      {/* Header / summary */}
-      <header className="space-y-2">
-        <p className="text-sm text-emerald-400 uppercase tracking-wide">
-          Vendor profile
-        </p>
-        <h1 className="text-3xl font-bold">{vendor.name}</h1>
-        <p className="text-sm text-gray-400">
-          Active vendor in your Truvern TPRM network.
-        </p>
+    <main className="relative max-w-6xl mx-auto px-4 lg:px-6 py-12 lg:py-16">
+      <section className="mb-5 rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-lg shadow-black/40">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl lg:text-3xl font-semibold text-slate-50">
+              {vendor.name}
+            </h1>
 
-        <div className="mt-4 flex flex-wrap gap-4">
-          <div className="rounded-lg border border-emerald-500/40 bg-black/30 px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide">
-              Risk score
-            </p>
-            <p className="text-2xl font-semibold text-emerald-400">
-              {riskScore}
-            </p>
+            <div className="flex flex-wrap gap-2">
+              {chip(vendor.category)}
+              {chip(vendor.tier ? `Tier: ${vendor.tier}` : null)}
+              {chip(
+                vendor.criticality ? `Criticality: ${vendor.criticality}` : null
+              )}
+              {!asVendor && chip(vendor.organization?.name ? `Org: ${vendor.organization.name}` : null)}
+            </div>
+
+            {asVendor && (
+              <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-100">
+                You’re viewing the <span className="font-semibold">Vendor Portal</span> safe
+                version of this profile (internal-only widgets hidden).
+              </div>
+            )}
           </div>
-          <div className="rounded-lg border border-gray-700 bg-black/30 px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide">
-              Vendor ID
-            </p>
-            <p className="text-lg font-mono text-gray-200">#{vendor.id}</p>
-          </div>
-          <div className="rounded-lg border border-gray-700 bg-black/30 px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide">
-              Created
-            </p>
-            <p className="text-sm text-gray-200">
-              {new Date(vendor.createdAt).toLocaleString()}
-            </p>
+
+          {/* ✅ ACTIONS */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* Enterprise toggle */}
+            {!asVendor ? (
+              <Link
+                href={`/vendors/${vendor.id}?as=vendor`}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-100 hover:bg-white/10"
+              >
+                View as Vendor
+              </Link>
+            ) : (
+              <Link
+                href={`/vendors/${vendor.id}`}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-500/15"
+              >
+                Back to Internal View
+              </Link>
+            )}
+
+            {/* Internal-only actions */}
+            {!asVendor && (
+              <>
+                <BoardPacketCTA variant="ghost" label="Board Packet" />
+
+                <Link
+                  href={`/vendors/${vendor.id}/findings`}
+                  className="inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/15"
+                >
+                  Findings ↗
+                </Link>
+
+                <Link
+                  href={`/assessment/new/${vendor.id}`}
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-slate-950 shadow-md hover:bg-emerald-400"
+                >
+                  Start assessment ↗
+                </Link>
+              </>
+            )}
+
+            {/* Vendor-safe primary CTA */}
+            {asVendor && (
+              <Link
+                href="/vendor-portal"
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-slate-950 shadow-md hover:bg-emerald-400"
+              >
+                Go to Vendor Portal ↗
+              </Link>
+            )}
           </div>
         </div>
 
-        <div className="mt-4">
-          <Link href="/vendors" className="text-emerald-400 underline text-sm">
-            ← Back to vendors
-          </Link>
-        </div>
-      </header>
-
-      {/* Evidence panel */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Evidence</h2>
-          <span className="text-xs text-gray-400">
-            {vendor.evidence.length} item
-            {vendor.evidence.length === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        {vendor.evidence.length === 0 ? (
-          <p className="text-gray-500 text-sm">
-            No evidence uploaded for this vendor yet.
-          </p>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-800 bg-black/40">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-900/70">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400">
-                    Title
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400">
-                    Description
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400">
-                    Added
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-400">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendor.evidence.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-t border-gray-800 hover:bg-gray-900/50"
-                  >
-                    <td className="px-4 py-3 align-top font-medium text-gray-100">
-                      {item.title ?? `Evidence #${item.id}`}
-                    </td>
-                    <td className="px-4 py-3 align-top text-gray-400">
-                      {item.description ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 align-top text-gray-400 whitespace-nowrap">
-                      {new Date(item.createdAt).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 align-top text-right">
-                      {item.fileUrl ? (
-                        <a
-                          href={item.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-400 hover:text-emerald-300 underline text-sm"
-                        >
-                          View / download
-                        </a>
-                      ) : (
-                        <span className="text-gray-500 text-xs">No file</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Vendor-safe summary strip */}
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="text-sm text-slate-200/80 max-w-3xl">
+            {vendor.summary ? (
+              vendor.summary
+            ) : (
+              <span className="text-slate-200/60">
+                No vendor summary yet. Add a short description to improve the trust profile.
+              </span>
+            )}
           </div>
-        )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${riskTone(
+                vendor.riskScore
+              )}`}
+              title="Vendor health / risk"
+            >
+              {riskLabel(vendor.riskScore)}
+            </span>
+
+            {/* Internal-only: issues badge */}
+            {!asVendor && (
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${issueTone(
+                  openIssues
+                )}`}
+                title="Open issues"
+              >
+                Issues: {openIssues}
+                {criticalOpen > 0 ? ` (Critical: ${criticalOpen})` : ""}
+              </span>
+            )}
+          </div>
+        </div>
       </section>
-    </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
+        <div className="space-y-5">
+          {/* Evidence timeline is OK in vendor-safe mode (it's their evidence),
+              but if you later want strict separation, wrap with {!asVendor && ...} */}
+          <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
+            <VendorEvidenceTimeline
+              vendorId={vendor.id}
+              vendorName={vendor.name}
+            />
+          </section>
+
+          {/* Internal-only: assessments list preview */}
+          {!asVendor && (
+            <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Recent assessments
+                </p>
+                <Link
+                  href="/assessment"
+                  className="text-xs text-slate-200/60 hover:text-slate-100"
+                >
+                  View all ↗
+                </Link>
+              </div>
+
+              {vendor.assessments.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-200/60">
+                  No assessments yet.
+                </p>
+              ) : (
+                <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10">
+                  {vendor.assessments.slice(0, 6).map((a) => (
+                    <Link
+                      key={a.id}
+                      href={`/assessment/runs/${a.id}`}
+                      className="block px-4 py-3 hover:bg-white/5"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-medium text-slate-50">
+                          {a.title ?? `Assessment #${a.id}`}
+                        </div>
+                        <div className="text-xs text-slate-200/60">
+                          {new Date(a.createdAt as any).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="mt-1 text-xs text-slate-200/70">
+                        Status: {a.status ?? "—"}
+                        {a.template?.name ? ` • Template: ${a.template.name}` : ""}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+
+        <aside className="space-y-5">
+          <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-2">
+              At a glance
+            </p>
+
+            <div className="space-y-2 text-[12px] text-slate-300">
+              <div className="flex justify-between">
+                <span>Risk score</span>
+                <span className="font-semibold">
+                  {vendor.riskScore ?? "Not scored"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Assessments</span>
+                <span>{assessmentCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Evidence</span>
+                <span>{evidenceCount}</span>
+              </div>
+
+              {!asVendor ? (
+                <div className="flex justify-between">
+                  <span>Open issues</span>
+                  <span className="text-amber-300 font-semibold">
+                    {openIssues}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex justify-between">
+                  <span>Trust status</span>
+                  <span className="font-semibold text-emerald-200">
+                    Verified
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ✅ SECONDARY BOARD PACKET ENTRY (internal only) */}
+            {!asVendor && (
+              <div className="mt-4">
+                <BoardPacketCTA variant="ghost" label="View in Board Packet" />
+              </div>
+            )}
+
+            {/* Vendor-safe CTA */}
+            {asVendor && (
+              <div className="mt-4">
+                <Link
+                  href="/vendor-portal"
+                  className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/15"
+                >
+                  Open Vendor Portal ↗
+                </Link>
+              </div>
+            )}
+          </section>
+
+          {/* Internal-only: critical issues callout */}
+          {!asVendor && criticalOpen > 0 && (
+            <section className="rounded-3xl border border-rose-500/25 bg-rose-500/10 px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-200">
+                Critical attention
+              </p>
+              <p className="mt-2 text-sm text-rose-100/90">
+                {criticalOpen} critical issue{criticalOpen === 1 ? "" : "s"} open.
+                Prioritize remediation and evidence updates.
+              </p>
+              <div className="mt-3">
+                <Link
+                  href={`/vendors/${vendor.id}/findings`}
+                  className="inline-flex items-center rounded-full border border-rose-300/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-500/15"
+                >
+                  Review Findings ↗
+                </Link>
+              </div>
+            </section>
+          )}
+        </aside>
+      </div>
+    </main>
   );
 }

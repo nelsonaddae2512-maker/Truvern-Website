@@ -1,52 +1,96 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+// app/api/vendors/[id]/assessments/route.ts
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-export const runtime = "nodejs";
+type RouteParams = {
+  params: { id: string };
+};
 
-function param(url: URL, seg: string) {
-  const p = url.pathname.split("/").filter(Boolean);
-  const i = p.indexOf(seg);
-  return i < 0 ? null : p[i + 1];
-}
-
-// GET all assessments for vendor
-export async function GET(req: NextRequest) {
-  const vendorId = param(req.nextUrl, "vendors");
-  if (!vendorId) return NextResponse.json({ error: "Missing vendor ID" }, { status: 400 });
-
-  try {
-    const list = await prisma.assessment.findMany({
-      where: { vendorId: Number(vendorId) },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json(list, { status: 200 });
-  } catch (err) {
-    console.error("GET assessments failed:", err);
-    return NextResponse.json({ error: "Failed to load assessments" }, { status: 500 });
+export async function POST(req: Request, { params }: RouteParams) {
+  const vendorId = Number(params.id);
+  if (!vendorId || Number.isNaN(vendorId)) {
+    return NextResponse.json({ error: "Invalid vendor id" }, { status: 400 });
   }
-}
 
-// POST new assessment
-export async function POST(req: NextRequest) {
-  const vendorId = param(req.nextUrl, "vendors");
-  if (!vendorId) return NextResponse.json({ error: "Missing vendor ID" }, { status: 400 });
-
-  const body = await req.json().catch(() => ({}));
+  let body: {
+    templateId: number;
+    title?: string;
+    dueAt?: string | null;
+  };
 
   try {
-    const created = await prisma.assessment.create({
-      data: {
-        vendorId: Number(vendorId),
-        score: body.score ?? null,
-        riskLevel: body.riskLevel ?? null,
-        summary: body.summary ?? null,
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
+  const templateId = Number(body.templateId);
+  if (!templateId || Number.isNaN(templateId)) {
+    return NextResponse.json(
+      { error: "templateId is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: vendorId },
+      include: {
+        organization: true,
       },
     });
 
-    return NextResponse.json(created, { status: 201 });
+    if (!vendor || !vendor.organization) {
+      return NextResponse.json(
+        { error: "Vendor or organization not found" },
+        { status: 404 }
+      );
+    }
+
+    const template = await prisma.assessmentTemplate.findUnique({
+      where: { id: templateId },
+    });
+
+    if (!template) {
+      return NextResponse.json(
+        { error: "Template not found" },
+        { status: 404 }
+      );
+    }
+
+    const dueAtDate =
+      body.dueAt && body.dueAt.trim().length > 0
+        ? new Date(body.dueAt)
+        : null;
+
+    const assessment = await prisma.assessment.create({
+      data: {
+        organizationId: vendor.organizationId,
+        vendorId: vendor.id,
+        templateId: template.id,
+        status: "DRAFT",
+        title: body.title?.trim() || template.name,
+        dueAt: dueAtDate,
+      },
+    });
+
+    const redirectUrl = `/assessments/${assessment.id}/run`;
+
+    return NextResponse.json(
+      {
+        id: assessment.id,
+        redirectUrl,
+      },
+      { status: 201 }
+    );
   } catch (err) {
-    console.error("POST assessment failed:", err);
-    return NextResponse.json({ error: "Failed to create assessment" }, { status: 500 });
+    console.error("Error creating vendor assessment", err);
+    return NextResponse.json(
+      { error: "Failed to create assessment" },
+      { status: 500 }
+    );
   }
 }

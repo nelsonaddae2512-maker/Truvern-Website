@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+// lib/db.ts
+import prismaDefault from "./prisma";
 
-const g = globalThis as unknown as { prisma?: PrismaClient };
-
-export const prisma =
-  g.prisma ?? new PrismaClient({ log: ["warn","error"] });
-
-if (process.env.NODE_ENV !== "production") g.prisma = prisma;
-
-export default prisma;
+/**
+ * Export prisma both as default and named so callers can do:
+ *   import prisma from "@/lib/db"
+ *   import { prisma } from "@/lib/db"
+ */
+export const prisma = prismaDefault;
+export default prismaDefault;

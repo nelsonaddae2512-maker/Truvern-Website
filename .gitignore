@@ -1,16 +1,29 @@
-# backups
-*.bak*
-*.backup*
-*.ps1
+# dependencies
+node_modules/
 
-# local artifacts
-project-tree.txt
+# next.js
+.next/
+out/
 
-# prisma backups
-prisma/*.bak*
+# env files (DO NOT COMMIT)
+.env
+.env.local
+.env.production
+.env.development
+.env.*.local
 
-# old next configs
-next.config.backup.js
+# prisma
+prisma/dev.db
+prisma/*.db
+prisma/*.db-journal
 
-# ops / local-only
-public-status/
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

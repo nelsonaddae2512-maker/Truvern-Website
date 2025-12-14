@@ -1,0 +1,18 @@
+0 verbose cli C:\nvm4w\nodejs\node.exe C:\Users\MR.NELSON\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.2
+2 info using node@v24.8.0
+3 silly config load:file:C:\Users\MR.NELSON\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\MR.NELSON\Downloads\truvern\.npmrc
+5 silly config load:file:C:\Users\MR.NELSON\.npmrc
+6 silly config load:file:C:\Users\MR.NELSON\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm exec prisma generate
+8 verbose argv "exec" "--" "prisma" "generate"
+9 verbose logfile logs-max:10 dir:C:\Users\MR.NELSON\Downloads\truvern\.npm-cache\_logs\2025-11-07T02_48_41_006Z-
+10 verbose logfile C:\Users\MR.NELSON\Downloads\truvern\.npm-cache\_logs\2025-11-07T02_48_41_006Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose cwd C:\Users\MR.NELSON\Downloads\truvern
+13 verbose os Windows_NT 10.0.19045
+14 verbose node v24.8.0
+15 verbose npm  v11.6.2
+16 verbose exit 0
+17 info ok

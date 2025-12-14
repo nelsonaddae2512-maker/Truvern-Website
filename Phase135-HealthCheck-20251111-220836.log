@@ -1,0 +1,46 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251111220836
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File .\Phase135-HealthCheck-Legacy.ps1
+Process ID: 14092
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+=== Phase135: Health Check (Legacy) ===
+Checking base: https://truvern.com
+Checking base: https://truvern-41d4tuc0v-nelson-ai-projects.vercel.app
+
+Results:
+
+Base                                                    Endpoint       Status    OK TookMs Bytes C
+                                                                                                 s
+                                                                                                 s
+                                                                                                 O
+                                                                                                 K
+----                                                    --------       ------    -- ------ ----- -
+https://truvern.com                                     /                 200  True    395  9680 e
+https://truvern.com                                     /api/health       200  True   1055     2 e
+https://truvern.com                                     /trust-network    200  True   1158  7017 e
+https://truvern-41d4tuc0v-nelson-ai-projects.vercel.app /                 404 False    240   107 e
+https://truvern-41d4tuc0v-nelson-ai-projects.vercel.app /api/health       404 False    207   107 e
+https://truvern-41d4tuc0v-nelson-ai-projects.vercel.app /trust-network    404 False     44   107 e
+
+
+
+JSON report: C:\Users\MR.NELSON\Downloads\truvern\Phase135-HealthCheck-20251111-220836.json
+Log saved:   C:\Users\MR.NELSON\Downloads\truvern\Phase135-HealthCheck-20251111-220836.log
+Phase135 complete.
+**********************
+Windows PowerShell transcript end
+End time: 20251111220840
+**********************

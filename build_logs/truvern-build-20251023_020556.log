@@ -1,0 +1,83 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251023020556
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 11560
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+📁 Working in C:\Users\MR.NELSON\Downloads\truvern
+🟢 Node: v24.8.0  npm: 11.6.2
+🧩 Patched next.config.js to disable fs/path
+🧹 Cleaning install...
+📦 npm install
+
+added 559 packages, and audited 560 packages in 5m
+
+72 packages are looking for funding
+  run `npm fund` for details
+
+1 critical severity vulnerability
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+🏗️  npm run build
+
+> truvern@1.0.0 build
+> npx prisma generate && next build
+
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7.
+Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Loaded Prisma config from prisma.config.ts.
+
+warn The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` proper
+ty in package.json.
+  For more information, see: https://pris.ly/prisma-config
+
+Prisma config detected, skipping environment variable loading.
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v6.17.1) to .\node_modules\@prisma\client in 360ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/t
+ip-3-accelerate
+
+ ⨯ Failed to load next.config.js, see more info here https://nextjs.org/docs/messages/next-config-err
+or
+
+> Build error occurred
+C:\Users\MR.NELSON\Downloads\truvern\next.config.js:15
+};const nextConfig = Object.assign({}, (typeof nextConfig !== 'undefined' ? nextConfig : {}), {
+        ^
+
+SyntaxError: Identifier 'nextConfig' has already been declared
+    at wrapSafe (node:internal/modules/cjs/loader:1691:18)
+    at Module._compile (node:internal/modules/cjs/loader:1734:20)
+    at Object..js (node:internal/modules/cjs/loader:1893:10)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at cjsLoader (node:internal/modules/esm/translators:329:5)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:221:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+**********************
+Windows PowerShell transcript end
+End time: 20251023021136
+**********************

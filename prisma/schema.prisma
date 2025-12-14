@@ -193,28 +193,28 @@ model Vendor {
   organizationId Int
   name           String
   slug           String             @unique
-  category       String? // e.g. "SaaS", "Sub-processor"
+  category       String?
   tier           VendorTier?
   criticality    VendorCriticality?
-  riskScore      Int? // 0-100
-  status         String? // e.g. "Active", "Pending", "Offboarded"
+  riskScore      Int?
+  status         String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime? // soft delete marker
+  deletedAt      DateTime?
 
-  organization  Organization         @relation(fields: [organizationId], references: [id])
-  assessments   Assessment[]
-  evidence      Evidence[]
-  issues        Issue[]
-  trustProfile  TrustProfile?
-  usageEvents   UsageEvent[]
-  shareTokens   VendorShareToken[] // trust share links
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  assessments    Assessment[]
+  evidence       Evidence[]
+  issues         Issue[]
+  trustProfile   TrustProfile?
+  usageEvents    UsageEvent[]
+  shareTokens    VendorShareToken[]
 
   // PHASE 321 — Evidence Requests
   evidenceRequests EvidenceRequest[]
 
   // Trend summary flags
-  riskTrend30d  String? // "IMPROVING" | "DECLINING" | "STABLE" | "NEW"
+  riskTrend30d  String?
   riskTrend90d  String?
   riskSnapshots VendorRiskSnapshot[]
   riskAlerts    VendorRiskAlert[]
@@ -226,7 +226,7 @@ model VendorRiskAlert {
   id         Int       @id @default(autoincrement())
   vendor     Vendor    @relation(fields: [vendorId], references: [id])
   vendorId   Int
-  type       String // e.g. DECLINING_CRITICAL_TREND
+  type       String
   message    String
   createdAt  DateTime  @default(now())
   resolvedAt DateTime?
@@ -240,14 +240,14 @@ model TrustProfile {
   organizationId Int
   isPublic       Boolean  @default(false)
   publicSlug     String?  @unique
-  headline       String? // short marketing headline
-  summary        String? // longer public description
+  headline       String?
+  summary        String?
   updatedAt      DateTime @updatedAt
   createdAt      DateTime @default(now())
 
-  vendor       Vendor       @relation(fields: [vendorId], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id])
-  links        TrustLink[]
+  vendor        Vendor       @relation(fields: [vendorId], references: [id])
+  organization  Organization @relation(fields: [organizationId], references: [id])
+  links         TrustLink[]
 }
 
 model VendorShareToken {
@@ -276,7 +276,7 @@ model TrustLink {
 
 /**
  * -------------------------------------------------------
- * PHASE 321 — EVIDENCE REQUESTS
+ * PHASE 321/322 — EVIDENCE REQUESTS + ITERATIONS
  * -------------------------------------------------------
  */
 
@@ -291,8 +291,19 @@ model EvidenceRequest {
   dueAt          DateTime?
   status         EvidenceRequestStatus @default(OPEN)
 
-  // Optional link to an Evidence item once submitted
+  // Legacy: optional link to a single Evidence item (kept for backward compatibility)
   evidenceId     Int?
+
+  // Legacy direct relation (kept)
+  evidence       Evidence[]
+
+  // PHASE 322 — submissions history
+  iterations     EvidenceRequestIteration[]
+
+  // lifecycle timestamps (request-level)
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  reviewNote     String?
 
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
@@ -302,6 +313,25 @@ model EvidenceRequest {
 
   @@index([vendorId, status])
   @@index([organizationId])
+}
+
+model EvidenceRequestIteration {
+  id                Int                   @id @default(autoincrement())
+  evidenceRequestId  Int
+  status             EvidenceRequestStatus @default(SUBMITTED)
+
+  submittedBy        String?
+  submittedAt        DateTime?            @default(now())
+
+  reviewedAt         DateTime?
+  reviewerNote       String?
+
+  createdAt          DateTime             @default(now())
+
+  evidenceRequest    EvidenceRequest @relation(fields: [evidenceRequestId], references: [id], onDelete: Cascade)
+  files              Evidence[]
+
+  @@index([evidenceRequestId, submittedAt])
 }
 
 /**
@@ -315,12 +345,11 @@ model AssessmentTemplate {
   organizationId Int?
   name           String
   description    String?
-  standard       String? // "SIG", "CAIQ", "Custom"
+  standard       String?
 
-  // PHASE 317A — richer template metadata (all optional, safe additions)
-  code        String?  @unique // e.g. "SOC2_CORE", "ISO27001_BASELINE"
-  category    String?  // e.g. "Security", "Privacy", "Third-Party Risk"
-  version     String?  // e.g. "v1.0"
+  code        String?  @unique
+  category    String?
+  version     String?
   isActive    Boolean  @default(true)
 
   createdAt      DateTime @default(now())
@@ -332,14 +361,13 @@ model AssessmentTemplate {
   assessments  Assessment[]
 }
 
-// NEW: sections within a template (Phase 317A)
 model AssessmentSection {
   id          Int       @id @default(autoincrement())
   templateId  Int
   title       String
   description String?
   order       Int       @default(0)
-  weight      Float?    // relative importance for scoring (optional)
+  weight      Float?
 
   template    AssessmentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   questions   AssessmentQuestion[]
@@ -348,37 +376,25 @@ model AssessmentSection {
 model AssessmentQuestion {
   id         Int      @id @default(autoincrement())
 
-  // Made optional so questions can live in a global bank,
-  // not only tied to a specific template.
   templateId Int?
   sectionId  Int?
   orderIndex Int
   text       String
 
-  // Existing helper text field
   helpText   String?
-
-  // New: surface for Question Bank UI
   description String?
   category    String?
 
-  // Keep existing type for safe migration
   type       QuestionType
-
-  // New richer type, optional for now (we can start populating this going forward)
   richType   AssessmentQuestionType?
 
   required   Boolean  @default(false)
-
-  // Optional weighting for scoring
   weight     Int?
 
-  // New: stable key & options JSON
   key        String?
   options    Json?
 
   createdAt  DateTime @default(now())
-  // IMPORTANT: @updatedAt already implies "now on update" — don't combine with @default(now())
   updatedAt  DateTime @updatedAt
 
   template AssessmentTemplate? @relation(fields: [templateId], references: [id])
@@ -396,19 +412,16 @@ model Assessment {
   title                String?
   dueAt                DateTime?
 
-  // Lifecycle timestamps (added for Submit/Reopen flows)
-  startedAt            DateTime? // set when first moved to IN_PROGRESS
-  submittedAt          DateTime? // set when user clicks "Submit Run" (even if status becomes COMPLETED)
-  completedAt          DateTime? // set when status becomes COMPLETED
-  reopenedAt           DateTime? // set when reopened back to IN_PROGRESS
-  archivedAt           DateTime? // set when moved to ARCHIVED
+  startedAt            DateTime?
+  submittedAt          DateTime?
+  completedAt          DateTime?
+  reopenedAt           DateTime?
+  archivedAt           DateTime?
 
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  /// Overall numeric score for this assessment (0–100).
   score                Int?
-  /// Category-level scores (0–100).
   confidentialityScore Int?
   integrityScore       Int?
   availabilityScore    Int?
@@ -424,7 +437,7 @@ model Assessment {
 model IssueEvent {
   id        Int      @id @default(autoincrement())
   issueId   Int
-  type      String   // "CREATED" | "STATUS_CHANGE" | "ASSIGNMENT" | "COMMENT" | "EVIDENCE"
+  type      String
   payload   Json?
   createdAt DateTime @default(now())
 
@@ -438,21 +451,11 @@ model AssessmentAnswer {
   assessmentId Int
   questionId   Int
 
-  /// LEGACY: keep this column for backward compatibility, but make it OPTIONAL
-  /// so we can store non-string answers safely in valueJson going forward.
   value        String?  @db.Text
-
-  /// New: richer structure (optional)
-  /// Example: ["Option A", "Option B"] or { "value": 5, "unit": "days" }
   valueJson    Json?
-
-  /// Optional derived score for this answer
   riskImpact   Int?
 
   createdAt    DateTime @default(now())
-
-  /// Keep optional to avoid breaking existing rows during migration;
-  /// routes can set this manually on update.
   updatedAt    DateTime?
 
   assessment Assessment         @relation(fields: [assessmentId], references: [id])
@@ -470,25 +473,31 @@ model AssessmentAnswer {
 model Evidence {
   id Int @id @default(autoincrement())
 
-  /// Foreign keys
   vendorId       Int
   organizationId Int
   assessmentId   Int?
   uploadedById   Int?
 
-  /// Data
+  evidenceRequestId   Int?
+  iterationId         Int?
+
   title       String
   description String?
   fileUrl     String?
   kind        EvidenceKind
   uploadedAt  DateTime     @default(now())
-  deletedAt   DateTime? // soft-delete marker
+  deletedAt   DateTime?
 
-  /// Relations
   vendor       Vendor       @relation(fields: [vendorId], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id])
   assessment   Assessment?  @relation(fields: [assessmentId], references: [id])
   uploadedBy   User?        @relation(fields: [uploadedById], references: [id])
+
+  evidenceRequest EvidenceRequest?          @relation(fields: [evidenceRequestId], references: [id], onDelete: SetNull)
+  iteration       EvidenceRequestIteration? @relation(fields: [iterationId], references: [id], onDelete: SetNull)
+
+  @@index([evidenceRequestId])
+  @@index([iterationId])
 }
 
 /**
@@ -505,20 +514,15 @@ model Issue {
   title          String
   description    String?
 
-  // ✅ Use enums (this is why Prisma wanted to change types)
   severity       IssueSeverity @default(MEDIUM)
   status         IssueStatus   @default(OPEN)
 
   openedAt       DateTime      @default(now())
   createdAt      DateTime      @default(now())
 
-  // ✅ SLA / accountability
   dueAt          DateTime?
-
-  // ✅ Safe migration: required + default for existing rows, still auto-updates on writes
   updatedAt      DateTime      @default(now()) @updatedAt
 
-  // Your existing fields
   closedAt       DateTime?
   createdById    Int?
   assignedToId   Int?
@@ -529,7 +533,6 @@ model Issue {
   createdBy    User?        @relation("IssueCreatedBy", fields: [createdById], references: [id])
   assignedTo   User?        @relation("IssueAssignedTo", fields: [assignedToId], references: [id])
 
-  // ✅ Audit trail
   events        IssueEvent[]
 
   @@index([organizationId, vendorId])
@@ -586,7 +589,7 @@ model UsageEvent {
   id             Int      @id @default(autoincrement())
   organizationId Int
   vendorId       Int?
-  kind           String // e.g. "VENDOR_CREATED", "EVIDENCE_UPLOADED"
+  kind           String
   details        Json?
   createdAt      DateTime @default(now())
 

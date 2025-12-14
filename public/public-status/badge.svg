@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="170" height="30">
+  <rect width="170" height="30" fill="#444"/>
+  <rect x="80" width="90" height="30" fill="#4caf50"/>
+  <text x="10" y="20" fill="#ffffff" font-family="Arial" font-size="14">Integrity</text>
+  <text x="90" y="20" fill="#ffffff" font-family="Arial" font-size="14">OK</text>
+</svg>

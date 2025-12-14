@@ -1,0 +1,86 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251111204015
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File .\Phase128-FinalAliasVerify.ps1
+Process ID: 16824
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+=== Phase128: Final Alias and Link Verification ===
+Working directory: C:\Users\MR.NELSON\Downloads\truvern
+Using Vercel: C:\Users\MR.NELSON\AppData\Roaming\npm\vercel.ps1 (ps1)
+Step 1/6: Checking Vercel login (whoami) ...
+-> vercel whoami
+nelsonaddae2512-1445
+Logged in as: nelsonaddae2512-1445
+Step 2/6: Inspecting .vercel/project.json ...
+Found orgId=team_w9K9hcMjhS7tibjDKu5QCRVM projectId=prj_0sIjlTVpDkHT2g2ueRXm43Fo0zws projectName=truvern
+.vercel/project.json looks sane
+Step 3/6: Safe relink check ...
+Relink not required
+Step 4/6: Verifying active project binding ...
+-> vercel env ls --scope nelson-ai-projects
+
+ name                               value               environments                        created    
+ VERCEL_OIDC_TOKEN                  Encrypted           Production                          20d ago    
+ BLOB_READ_WRITE_TOKEN              Encrypted           Development, Preview, Production    23d ago    
+ DATABASE_URL                       Encrypted           Production                          25d ago    
+ NEXT_PUBLIC_SITE_URL               Encrypted           Production                          25d ago    
+ RESEND_API_KEY                     Encrypted           Development, Preview, Production    25d ago    
+ PRISMA_CLIENT_ENGINE_TYPE          Encrypted           Development, Preview, Production    25d ago    
+ NEXTAUTH_SECRET                    Encrypted           Development, Preview, Production    25d ago    
+ NEXTAUTH_URL                       Encrypted           Development, Preview, Production    25d ago    
+ DATABASE_URL                       Encrypted           Development                         26d ago    
+ SHADOW_DATABASE_URL                Encrypted           Preview                             31d ago    
+ DIRECT_DATABASE_URL                Encrypted           Preview                             31d ago    
+ DATABASE_URL                       Encrypted           Preview                             31d ago    
+ SHADOW_DATABASE_URL                Encrypted           Production                          31d ago    
+ DIRECT_DATABASE_URL                Encrypted           Production                          31d ago
+Environment listing returned successfully for project scope nelson-ai-projects.
+Step 5/6: Dry sanity checks ...
+-> vercel env ls --scope nelson-ai-projects
+
+ name                               value               environments                        created    
+ VERCEL_OIDC_TOKEN                  Encrypted           Production                          20d ago    
+ BLOB_READ_WRITE_TOKEN              Encrypted           Development, Preview, Production    23d ago    
+ DATABASE_URL                       Encrypted           Production                          25d ago    
+ NEXT_PUBLIC_SITE_URL               Encrypted           Production                          25d ago    
+ RESEND_API_KEY                     Encrypted           Development, Preview, Production    25d ago    
+ PRISMA_CLIENT_ENGINE_TYPE          Encrypted           Development, Preview, Production    25d ago    
+ NEXTAUTH_SECRET                    Encrypted           Development, Preview, Production    25d ago    
+ NEXTAUTH_URL                       Encrypted           Development, Preview, Production    25d ago    
+ DATABASE_URL                       Encrypted           Development                         26d ago    
+ SHADOW_DATABASE_URL                Encrypted           Preview                             31d ago    
+ DIRECT_DATABASE_URL                Encrypted           Preview                             31d ago    
+ DATABASE_URL                       Encrypted           Preview                             31d ago    
+ SHADOW_DATABASE_URL                Encrypted           Production                          31d ago    
+ DIRECT_DATABASE_URL                Encrypted           Production                          31d ago
+Env listing OK (unified listing mode)
+Env listing OK (production)
+Note: alias and domains are managed in Vercel dashboard. This script only validates local link.
+
+Step 6/6: Summary
+-> vercel --version
+48.9.0
+â€¢ OrgId:      team_w9K9hcMjhS7tibjDKu5QCRVM
+â€¢ ProjectId:  prj_0sIjlTVpDkHT2g2ueRXm43Fo0zws
+â€¢ Project:    truvern
+â€¢ Scope:      nelson-ai-projects
+â€¢ Vercel CLI: 48.9.0
+
+Phase128 complete: Link and alias verification passed
+Log saved to: C:\Users\MR.NELSON\Downloads\truvern\Phase128-FinalAliasVerify.log
+**********************
+Windows PowerShell transcript end
+End time: 20251111204024
+**********************

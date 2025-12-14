@@ -1,3 +1,4 @@
+// app/api/evidence-requests/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
@@ -13,28 +14,38 @@ function devBypassEnabled() {
 
 export async function POST(req: Request) {
   try {
-    // Basic auth gate (enterprise-ready). In dev bypass, allow without login.
     const { userId } = auth();
+
+    // Require auth unless dev bypass enabled
     if (!userId && !devBypassEnabled()) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const vendorId = Number(body.vendorId);
 
     if (!Number.isFinite(vendorId)) {
       return NextResponse.json({ ok: false, error: "Invalid vendorId" }, { status: 400 });
     }
 
+    const label = String(body.label ?? "").trim();
+    if (!label) {
+      return NextResponse.json({ ok: false, error: "Label is required" }, { status: 400 });
+    }
+
+    const kind = String(body.kind ?? "OTHER");
+    const description = body.description ? String(body.description) : null;
+    const dueAt = body.dueAt ? new Date(body.dueAt) : null;
+
     const created = await prisma.evidenceRequest.create({
       data: {
         vendorId,
         organizationId: body.organizationId ? Number(body.organizationId) : null,
         requestedBy: userId ?? "dev-bypass",
-        kind: body.kind ?? "OTHER",
-        label: String(body.label ?? "").trim() || "Evidence request",
-        description: body.description ? String(body.description) : null,
-        dueAt: body.dueAt ? new Date(body.dueAt) : null,
+        kind: kind as any,
+        label,
+        description,
+        dueAt,
         status: "OPEN",
       } as any,
     });

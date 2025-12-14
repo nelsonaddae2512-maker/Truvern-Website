@@ -1,28 +1,30 @@
 // middleware.ts
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export default clerkMiddleware({
-  publicRoutes: [
-    "/",                // home
-    "/trust-network",
-    "/vendors",         // vendor list (marketing shell, still fine)
-    "/pricing",
-    "/contact",
-    "/login",
-    "/sign-up",
-    // ✅ Make all trust links public
-    "/trust(.*)",
-    // Optionally: allow the trust-link API to be called without auth
-    "/api/trust-link",
-    "/api/public/vendor",
-  ],
+const isPublicRoute = createRouteMatcher([
+  "/", // home
+  "/pricing(.*)",
+  "/trust-network(.*)",
+  "/vendors(.*)",
+  "/board-report(.*)",
+  "/issues(.*)",
+  "/activity(.*)",
+  "/contact(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/board-report/export(.*)",
+]);
+
+export default clerkMiddleware((auth, req) => {
+  // Protect everything that's not explicitly public
+  if (!isPublicRoute(req)) {
+    auth.protect();
+  }
 });
 
 export const config = {
   matcher: [
-    // Run middleware on all routes except static files and _next
-    "/((?!.*\\..*|_next).*)",
-    "/",
+    "/((?!_next|.*\\.(?:css|js|json|png|jpg|jpeg|gif|svg|ico|webp|map|txt|woff|woff2)).*)",
     "/(api|trpc)(.*)",
   ],
 };

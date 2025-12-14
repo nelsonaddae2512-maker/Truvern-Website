@@ -88,6 +88,16 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+async function safeJson(res: Response) {
+  const txt = await res.text().catch(() => "");
+  if (!txt) return null;
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return { ok: false, error: txt };
+  }
+}
+
 export default function AssessmentRunEditor({
   assessmentId,
   initialStatus,
@@ -210,16 +220,30 @@ export default function AssessmentRunEditor({
     setSaving((p) => ({ ...p, [questionId]: true }));
 
     try {
-      const r = await fetch("/api/assessment-answers/upsert", {
+      // ✅ FIXED ENDPOINT
+      const r = await fetch("/api/assessment/answers", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assessmentId, questionId, value }),
       });
 
-      const data = await r.json().catch(() => null);
-      if (!r.ok || !data?.ok) throw new Error(data?.error ?? `HTTP ${r.status}`);
+      const data = await safeJson(r);
+      if (!r.ok || !data?.ok) {
+        const msg = data?.error ?? `HTTP ${r.status}`;
+        throw new Error(msg);
+      }
 
       setSavedTick((p) => ({ ...p, [questionId]: Date.now() }));
+
+      // If server auto-completed, reflect it immediately
+      const nextStatus = data?.assessment?.status;
+      if (typeof nextStatus === "string" && nextStatus !== status) {
+        setStatus(nextStatus);
+      }
+
+      // Refresh server-rendered progress/headers
+      router.refresh();
     } catch (e: any) {
       setSaveError(e?.message ?? "Save failed");
     } finally {
@@ -231,8 +255,11 @@ export default function AssessmentRunEditor({
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const r = await fetch(`/api/assessment-runs/${assessmentId}/submit`, { method: "POST" });
-      const data = await r.json().catch(() => null);
+      const r = await fetch(`/api/assessment-runs/${assessmentId}/submit`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await safeJson(r);
       if (!r.ok || !data?.ok) throw new Error(data?.error ?? `HTTP ${r.status}`);
 
       setStatus("COMPLETED");
@@ -248,8 +275,11 @@ export default function AssessmentRunEditor({
     setReopenError(null);
     setReopening(true);
     try {
-      const r = await fetch(`/api/assessment-runs/${assessmentId}/reopen`, { method: "POST" });
-      const data = await r.json().catch(() => null);
+      const r = await fetch(`/api/assessment-runs/${assessmentId}/reopen`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await safeJson(r);
       if (!r.ok || !data?.ok) throw new Error(data?.error ?? `HTTP ${r.status}`);
 
       setStatus("IN_PROGRESS");
@@ -262,6 +292,9 @@ export default function AssessmentRunEditor({
   }
 
   function questionMeta(q: Question, v: any) {
+    reminding: {
+      // noop label to keep diff minimal
+    }
     const t = (q.type ?? "").toUpperCase();
     const answered = isAnswered(v);
     const required = !!q.required;
@@ -582,7 +615,9 @@ export default function AssessmentRunEditor({
             </div>
           </div>
 
-          {saveError ? <div className="mt-3 text-xs text-rose-200">Save error: {saveError}</div> : null}
+          {saveError ? (
+            <div className="mt-3 text-xs text-rose-200">Save error: {saveError}</div>
+          ) : null}
           {submitError ? (
             <div className="mt-3 text-xs text-rose-200">Submit error: {submitError}</div>
           ) : null}
@@ -685,7 +720,7 @@ export default function AssessmentRunEditor({
           );
         })}
 
-        {/* ✅ Restored Results section */}
+        {/* Results section */}
         <section
           id="results"
           className="rounded-3xl border border-slate-800 bg-slate-950/60 px-4 py-4 shadow-lg shadow-black/40"

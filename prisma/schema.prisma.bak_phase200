@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vendor {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  riskScore   Int?
+  createdAt   DateTime     @default(now())
+  assessments Assessment[]
+
+  evidence Evidence[]
+  issues   Issue[]
+}
+
+model Assessment {
+  id        Int      @id @default(autoincrement())
+  vendorId  Int
+  score     Int?
+  riskLevel String?
+  summary   String?
+  createdAt DateTime @default(now())
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+}
+
+model Issue {
+  id       Int    @id @default(autoincrement())
+  title    String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId Int
+}
+
+model Evidence {
+  id       Int    @id @default(autoincrement())
+  vendorId Int
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+
+  title       String?
+  description String?
+  fileUrl     String?
+  fileName    String?
+  contentType String?
+  size        Int?
+  uploadedBy  String?
+
+  // 🔹 THIS IS THE FIELD PRISMA IS COMPLAINING ABOUT
+  uploadedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+}

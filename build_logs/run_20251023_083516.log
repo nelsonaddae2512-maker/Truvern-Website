@@ -1,0 +1,68 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251023083516
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 11464
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+🧾 Logging to: C:\Users\MR.NELSON\Downloads\truvern\build_logs\run_20251023_083516.log
+🟢 Using Node v24.8.0 / npm 11.6.2
+⚙️  Using config: C:\Users\MR.NELSON\Downloads\truvern\next.config.js
+🧾 Backup saved: next.config.js.bak_20251023_083517
+✅ Wrote clean next.config.js with fs/path fallbacks.
+📦 Using existing node_modules. If build fails, run a clean install.
+🏗️  Building production...
+
+> truvern@1.0.0 build
+> npx prisma generate && next build
+
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7
+. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Loaded Prisma config from prisma.config.ts.
+
+warn The Prisma config file in prisma.config.ts overrides the deprecated `package.json#prisma` prop
+erty in package.json.
+  For more information, see: https://pris.ly/prisma-config
+
+Prisma config detected, skipping environment variable loading.
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v6.17.1) to .\node_modules\@prisma\client in 279ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+  ▲ Next.js 14.2.3
+  - Environments: .env.production.local, .env.local, .env
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./app/layout.tsx
+Module not found: Can't resolve '/tw.css'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors
+
+❌ ERROR: Build failed with code 1 (see log: C:\Users\MR.NELSON\Downloads\truvern\build_logs\run_20251023_083516.log)
+See log for details: C:\Users\MR.NELSON\Downloads\truvern\build_logs\run_20251023_083516.log
+**********************
+Windows PowerShell transcript end
+End time: 20251023083535
+**********************

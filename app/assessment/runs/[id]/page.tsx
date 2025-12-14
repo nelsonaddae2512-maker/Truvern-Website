@@ -1,276 +1,264 @@
 // app/assessment/runs/[id]/page.tsx
 import Link from "next/link";
 import prisma from "@/lib/prisma";
-import AssessmentRunEditor from "@/components/assessment-run-editor";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+import AssessmentRunResponder from "@/components/assessment-run-responder";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type ParamsPromise = Promise<{ id: string }>;
-
-type Props = {
-  params: ParamsPromise;
-  searchParams?: Promise<{ as?: string }>;
-};
-
-function isInternalRouteBackHref() {
-  // You’ve standardized on /assessment (list) now, but keep fallback.
-  return "/assessment";
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
 }
 
-export default async function AssessmentRunPage({ params, searchParams }: Props) {
-  const { userId } = auth();
-  const user = userId ? await currentUser() : null;
+function fmtDate(d?: Date | string | null) {
+  if (!d) return "—";
+  const dt = typeof d === "string" ? new Date(d) : d;
+  if (Number.isNaN(dt.getTime())) return "—";
+  return dt.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
+function statusTone(status: string) {
+  const s = String(status || "").toUpperCase();
+  if (s.includes("IN_PROGRESS"))
+    return "border-sky-500/30 bg-sky-500/10 text-sky-200";
+  if (s.includes("COMPLETE") || s.includes("DONE"))
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+  if (s.includes("CANCEL") || s.includes("ARCHIVE"))
+    return "border-slate-500/30 bg-slate-500/10 text-slate-200";
+  return "border-white/10 bg-white/5 text-slate-200/80";
+}
+
+function qOrder(q: any) {
+  const oi = Number(q?.orderIndex);
+  if (Number.isFinite(oi)) return oi;
+  const o = Number(q?.order);
+  if (Number.isFinite(o)) return o;
+  return 9999;
+}
+
+export default async function AssessmentRunPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const runId = Number(id);
 
-  const sp = searchParams ? await searchParams : {};
-  const asVendorPreview = sp?.as === "vendor"; // internal "view as vendor" mode
-  const backHref = isInternalRouteBackHref();
-
   if (!Number.isFinite(runId)) {
     return (
-      <main className="container-page py-12">
-        <h1 className="text-2xl font-semibold">Invalid assessment id</h1>
-        <Link className="mt-4 inline-block underline" href={backHref}>
-          Back to runs
-        </Link>
+      <main className="container-page py-10">
+        <h1 className="text-2xl font-semibold text-slate-50">Invalid run id</h1>
       </main>
     );
   }
 
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: runId },
-    include: {
-      vendor: { select: { id: true, name: true } },
-      template: { select: { id: true, name: true } },
-      answers: {
-        select: {
-          id: true,
-          assessmentId: true,
-          questionId: true,
-          value: true,
-          valueJson: true,
-          updatedAt: true,
+  // Support either prisma.assessment or prisma.assessmentRun
+  const RunModel: any =
+    (prisma as any).assessmentRun ?? (prisma as any).assessment;
+
+  const run = RunModel
+    ? await RunModel.findUnique({
+        where: { id: runId },
+        include: {
+          vendor: { select: { id: true, name: true, riskScore: true } },
         },
-      },
-    },
-  });
+      }).catch(() => null)
+    : null;
 
-  if (!assessment) {
-    return (
-      <main className="container-page py-12">
-        <h1 className="text-2xl font-semibold">Assessment not found</h1>
-        <Link className="mt-4 inline-block underline" href={backHref}>
-          Back to runs
-        </Link>
-      </main>
-    );
+  // Answers are run-scoped in your schema (assessmentId)
+  const answers: any[] =
+    (await (prisma as any).assessmentAnswer
+      ?.findMany({
+        where: { assessmentId: runId },
+        select: { id: true, questionId: true, value: true, updatedAt: true },
+      })
+      .catch(() => [])) ?? [];
+
+  const answerMap = new Map<number, any>();
+  for (const a of answers) {
+    const qid = Number(a?.questionId);
+    if (Number.isFinite(qid)) answerMap.set(qid, a);
   }
 
-  /**
-   * ✅ Enterprise access rules:
-   * - Vendor users can only open runs where assessment.vendorId === user.publicMetadata.vendorId
-   * - Internal users can open any run
-   * - "as=vendor" preview is allowed (it only affects UI; still requires internal access)
-   *
-   * Since you haven’t wired internal org roles yet, we define:
-   * - If user has publicMetadata.vendorId => treat as Vendor user (restricted)
-   * - Otherwise treat as Internal user (unrestricted)
-   */
-  const userVendorIdRaw = (user?.publicMetadata as any)?.vendorId;
-  const userVendorId =
-    typeof userVendorIdRaw === "number"
-      ? userVendorIdRaw
-      : typeof userVendorIdRaw === "string"
-      ? Number(userVendorIdRaw)
-      : undefined;
+  // Questions may be template-scoped in your schema.
+  const templateId = (run as any)?.templateId ?? null;
 
-  const isVendorUser = Number.isFinite(userVendorId as any);
-  const isInternalUser = !!userId && !isVendorUser;
-
-  // If not signed in, block (you can loosen later for demo)
-  if (!userId) {
-    return (
-      <main className="container-page py-12">
-        <h1 className="text-2xl font-semibold">Sign in required</h1>
-        <p className="mt-2 text-slate-300">
-          Please sign in to view this assessment run.
-        </p>
-        <Link className="mt-4 inline-block underline" href="/">
-          Back home
-        </Link>
-      </main>
-    );
-  }
-
-  // Vendor user restriction
-  if (isVendorUser) {
-    const runVendorId = (assessment as any).vendorId as number | null | undefined;
-
-    if (!runVendorId || runVendorId !== userVendorId) {
-      return (
-        <main className="container-page py-12">
-          <h1 className="text-2xl font-semibold">Access denied</h1>
-          <p className="mt-2 text-slate-300">
-            This assessment run isn’t assigned to your vendor account.
-          </p>
-          <Link className="mt-4 inline-block underline" href="/vendor-portal">
-            Go to Vendor Portal
-          </Link>
-        </main>
-      );
-    }
-  }
-
-  // Internal user can access everything; preview flag just tweaks UI.
-  const showInternalLinks = isInternalUser && !asVendorPreview;
-
-  // Load questions:
-  // Prefer template questions; fall back to answered questions only.
+  // Prefer: run-scoped questions (assessmentId) if your schema supports it.
+  // Fallback: template-scoped questions (templateId).
+  // Final fallback: show some questions anyway (to avoid empty run views).
   let questions: any[] = [];
-  if (assessment.templateId) {
-    try {
-      questions = await prisma.assessmentQuestion.findMany({
-        where: { templateId: assessment.templateId },
-        orderBy: [
-          { sectionId: "asc" as any },
-          { orderIndex: "asc" as any },
-          { id: "asc" as any },
-        ],
-        include: { section: true },
-      });
-    } catch {
-      questions = [];
+  const AQ: any = (prisma as any).assessmentQuestion;
+
+  if (AQ?.findMany) {
+    // 1) Try run-scoped
+    questions =
+      (await AQ.findMany({
+        where: { assessmentId: runId },
+        take: 1000,
+      }).catch(() => [])) ?? [];
+
+    // 2) Try template-scoped
+    if ((!questions || questions.length === 0) && templateId) {
+      questions =
+        (await AQ.findMany({
+          where: { templateId },
+          take: 1000,
+        }).catch(() => [])) ?? [];
+    }
+
+    // 3) Try all questions (last resort)
+    if (!questions || questions.length === 0) {
+      questions =
+        (await AQ.findMany({
+          take: 200,
+        }).catch(() => [])) ?? [];
     }
   }
 
-  if (questions.length === 0) {
-    // fallback: derive minimal question objects from answers
-    questions = assessment.answers
-      .filter((a) => a.questionId != null)
-      .map((a) => ({
-        id: a.questionId!,
-        text: `Question #${a.questionId}`,
-        type: "TEXT",
-        required: false,
-      }));
-  }
-
-  const initialAnswers = assessment.answers.map((a) => ({
-    id: a.id,
-    assessmentId: a.assessmentId,
-    questionId: a.questionId,
-    value: a.valueJson ?? a.value, // editor expects raw-ish value
-    updatedAt: a.updatedAt ? a.updatedAt.toISOString() : null,
-  }));
-
-  // Back destinations depend on audience
-  const effectiveBackHref = isVendorUser ? "/vendor-portal" : backHref;
+  const sortedQuestions = [...questions].sort((a, b) => qOrder(a) - qOrder(b));
+  const answeredCount = sortedQuestions.filter((q) =>
+    answerMap.has(Number(q?.id))
+  ).length;
 
   return (
-    <main className="relative max-w-6xl mx-auto px-4 lg:px-6 py-12 lg:py-16">
-      <div className="pointer-events-none absolute inset-x-0 -top-32 -z-10 h-64 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.18),transparent_60%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-64 bg-[radial-gradient(circle_at_bottom,_rgba(56,189,248,0.14),transparent_60%)]" />
-
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="text-xs tracking-[0.25em] text-emerald-200/80">
-            {isVendorUser || asVendorPreview ? "VENDOR PORTAL" : "ASSESSMENTS"}
+    <main className="container-page py-10">
+      <SignedOut>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+          <h1 className="text-2xl font-semibold text-slate-50">Assessment run</h1>
+          <p className="mt-2 text-sm text-slate-200/70">
+            Please sign in to view this run.
+          </p>
+          <div className="mt-6 flex gap-2">
+            <Link
+              href="/sign-in"
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/assessment"
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
+            >
+              Back to assessments
+            </Link>
           </div>
+        </div>
+      </SignedOut>
 
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-50">
-            Assessment Run
-          </h1>
-
-          {(asVendorPreview && isInternalUser) && (
-            <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-100">
-              You’re viewing this run in <span className="font-semibold">Vendor-safe preview</span>{" "}
-              mode (internal-only navigation hidden).
+      <SignedIn>
+        {!RunModel ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <h1 className="text-2xl font-semibold text-slate-50">
+              Assessments not available
+            </h1>
+            <p className="mt-2 text-sm text-slate-200/70">
+              No <code className="text-slate-50">assessment</code> or{" "}
+              <code className="text-slate-50">assessmentRun</code> model found
+              in Prisma.
+            </p>
+          </div>
+        ) : !run ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
+            <h1 className="text-2xl font-semibold text-slate-50">Run not found</h1>
+            <p className="mt-2 text-sm text-slate-200/70">
+              No assessment run exists with id #{runId}.
+            </p>
+            <div className="mt-6">
+              <Link
+                href="/assessment"
+                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
+              >
+                Back to assessments
+              </Link>
             </div>
-          )}
-
-          <div className="mt-2 text-sm text-slate-300">
-            <span className="text-slate-400">Assessment ID:</span>{" "}
-            <span className="font-semibold text-slate-100">{assessment.id}</span>
           </div>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="text-xs font-semibold tracking-wider text-emerald-200/90">
+                  ASSESSMENT RUN
+                </div>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-50">
+                  {run?.title ?? `Run #${run.id}`}
+                </h1>
 
-          <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-300">
-            {assessment.vendor ? (
-              <span>
-                <span className="text-slate-400">Vendor:</span>{" "}
-                {showInternalLinks ? (
-                  <Link
-                    className="text-emerald-200 hover:underline"
-                    href={`/vendors/${assessment.vendor.id}`}
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-200/70">
+                  <span
+                    className={clsx(
+                      "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                      statusTone(String(run?.status ?? "UNKNOWN"))
+                    )}
                   >
-                    {assessment.vendor.name}
-                  </Link>
-                ) : (
-                  <span className="font-semibold text-slate-100">
-                    {assessment.vendor.name}
+                    {String(run?.status ?? "UNKNOWN")}
                   </span>
-                )}
-              </span>
-            ) : null}
+                  <span className="opacity-60">·</span>
+                  <span>Started: {fmtDate(run?.startedAt ?? run?.createdAt)}</span>
+                  <span className="opacity-60">·</span>
+                  <span>Updated: {fmtDate(run?.updatedAt ?? run?.createdAt)}</span>
+                </div>
 
-            <span>
-              <span className="text-slate-400">Status:</span>{" "}
-              <span className="font-semibold text-slate-100">
-                {assessment.status}
-              </span>
-            </span>
+                <div className="mt-2 text-sm text-slate-200/70">
+                  Vendor:{" "}
+                  {run?.vendor?.id ? (
+                    <Link
+                      href={`/vendors/${run.vendor.id}`}
+                      className="font-semibold text-emerald-200/90 hover:text-emerald-200"
+                    >
+                      {run.vendor.name ?? `Vendor #${run.vendor.id}`}
+                    </Link>
+                  ) : (
+                    <span className="opacity-70">—</span>
+                  )}
+                </div>
 
-            <span>
-              <span className="text-slate-400">Template:</span>{" "}
-              <span className="font-semibold text-slate-100">
-                {assessment.template?.name
-                  ? assessment.template.name
-                  : `#${assessment.templateId ?? "—"}`}
-              </span>
-            </span>
-          </div>
-        </div>
+                <div className="mt-2 text-sm text-slate-200/70">
+                  Progress:{" "}
+                  <span className="font-semibold text-slate-50">
+                    {answeredCount}/{sortedQuestions.length}
+                  </span>{" "}
+                  answered
+                </div>
+              </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <Link
-            className="text-sm text-emerald-200 hover:underline"
-            href={effectiveBackHref}
-          >
-            Back
-          </Link>
-
-          {/* Internal-only quick toggle to preview vendor-safe mode */}
-          {isInternalUser && (
-            <div className="flex items-center gap-2">
-              {!asVendorPreview ? (
+              <div className="flex flex-wrap gap-2">
                 <Link
-                  href={`/assessment/runs/${assessment.id}?as=vendor`}
-                  className="text-xs rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-100 hover:bg-white/10"
+                  href="/assessment"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
                 >
-                  View as Vendor
+                  Back to assessments
                 </Link>
-              ) : (
-                <Link
-                  href={`/assessment/runs/${assessment.id}`}
-                  className="text-xs rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-emerald-100 hover:bg-emerald-500/15"
-                >
-                  Back to Internal View
-                </Link>
-              )}
+                {run?.vendor?.id ? (
+                  <Link
+                    href={`/vendors/${run.vendor.id}`}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
+                  >
+                    View vendor
+                  </Link>
+                ) : null}
+              </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      <AssessmentRunEditor
-        assessmentId={assessment.id}
-        initialStatus={assessment.status as any}
-        questions={questions as any}
-        initialAnswers={initialAnswers}
-        backHref={effectiveBackHref}
-      />
+            {/* ✅ Interactive responder UI (clickable answers + autosave + scoring) */}
+            <AssessmentRunResponder
+              assessmentId={run.id}
+              questions={sortedQuestions as any}
+              initialAnswers={answers as any}
+            />
+
+            <div className="mt-3 text-xs text-slate-200/50">
+              Template: {templateId ? `#${templateId}` : "—"} · Answers:{" "}
+              {answers.length}
+            </div>
+          </>
+        )}
+      </SignedIn>
     </main>
   );
 }

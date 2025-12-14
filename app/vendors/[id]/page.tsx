@@ -89,10 +89,28 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
 
   const assessmentCount = vendor.assessments.length;
   const evidenceCount = vendor.evidence.length;
-  const openIssues = vendor.issues.filter((i) => i.status !== "RESOLVED").length;
-  const criticalOpen = vendor.issues.filter(
-    (i) => i.status !== "RESOLVED" && i.severity === "CRITICAL"
+
+  // ✅ FIX: treat ACCEPTED_RISK as NOT open
+  // Only "OPEN" + "IN_REVIEW" count as open issues on the workspace.
+  const OPEN_STATUSES = new Set(["OPEN", "IN_REVIEW"]);
+
+  const openIssues = vendor.issues.filter((i) =>
+    OPEN_STATUSES.has(String(i.status))
   ).length;
+
+  const criticalOpen = vendor.issues.filter(
+    (i) =>
+      OPEN_STATUSES.has(String(i.status)) &&
+      String(i.severity) === "CRITICAL"
+  ).length;
+
+  // Optional: show accepted risks separately (useful for audit visibility)
+  const acceptedRiskCount = vendor.issues.filter(
+    (i) => String(i.status) === "ACCEPTED_RISK"
+  ).length;
+
+  // ✅ Trust-profile-safe summary (Vendor model does NOT have `summary` in your schema)
+  const summary = vendor.trustProfile?.summary ?? null;
 
   return (
     <main className="relative max-w-6xl mx-auto px-4 lg:px-6 py-12 lg:py-16">
@@ -109,20 +127,24 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
               {chip(
                 vendor.criticality ? `Criticality: ${vendor.criticality}` : null
               )}
-              {!asVendor && chip(vendor.organization?.name ? `Org: ${vendor.organization.name}` : null)}
+              {!asVendor &&
+                chip(
+                  vendor.organization?.name
+                    ? `Org: ${vendor.organization.name}`
+                    : null
+                )}
             </div>
 
             {asVendor && (
               <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-100">
-                You’re viewing the <span className="font-semibold">Vendor Portal</span> safe
-                version of this profile (internal-only widgets hidden).
+                You’re viewing the{" "}
+                <span className="font-semibold">Vendor Portal</span> safe version
+                of this profile (internal-only widgets hidden).
               </div>
             )}
           </div>
 
-          {/* ✅ ACTIONS */}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {/* Enterprise toggle */}
             {!asVendor ? (
               <Link
                 href={`/vendors/${vendor.id}?as=vendor`}
@@ -139,7 +161,6 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
               </Link>
             )}
 
-            {/* Internal-only actions */}
             {!asVendor && (
               <>
                 <BoardPacketCTA variant="ghost" label="Board Packet" />
@@ -152,6 +173,13 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
                 </Link>
 
                 <Link
+                  href={`/vendors/${vendor.id}/evidence-requests/new`}
+                  className="inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-200 hover:bg-sky-500/15"
+                >
+                  Request evidence ↗
+                </Link>
+
+                <Link
                   href={`/assessment/new/${vendor.id}`}
                   className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-slate-950 shadow-md hover:bg-emerald-400"
                 >
@@ -160,7 +188,6 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
               </>
             )}
 
-            {/* Vendor-safe primary CTA */}
             {asVendor && (
               <Link
                 href="/vendor-portal"
@@ -172,14 +199,14 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
           </div>
         </div>
 
-        {/* Vendor-safe summary strip */}
         <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="text-sm text-slate-200/80 max-w-3xl">
-            {vendor.summary ? (
-              vendor.summary
+            {summary ? (
+              summary
             ) : (
               <span className="text-slate-200/60">
-                No vendor summary yet. Add a short description to improve the trust profile.
+                No vendor summary yet. Add a short description to improve the
+                trust profile.
               </span>
             )}
           </div>
@@ -194,17 +221,27 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
               {riskLabel(vendor.riskScore)}
             </span>
 
-            {/* Internal-only: issues badge */}
             {!asVendor && (
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${issueTone(
-                  openIssues
-                )}`}
-                title="Open issues"
-              >
-                Issues: {openIssues}
-                {criticalOpen > 0 ? ` (Critical: ${criticalOpen})` : ""}
-              </span>
+              <>
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${issueTone(
+                    openIssues
+                  )}`}
+                  title="Open issues (excludes accepted risk)"
+                >
+                  Issues: {openIssues}
+                  {criticalOpen > 0 ? ` (Critical: ${criticalOpen})` : ""}
+                </span>
+
+                {acceptedRiskCount > 0 ? (
+                  <span
+                    className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200/80"
+                    title="Accepted risks (tracked, not blocking)"
+                  >
+                    Accepted risk: {acceptedRiskCount}
+                  </span>
+                ) : null}
+              </>
             )}
           </div>
         </div>
@@ -212,16 +249,10 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
         <div className="space-y-5">
-          {/* Evidence timeline is OK in vendor-safe mode (it's their evidence),
-              but if you later want strict separation, wrap with {!asVendor && ...} */}
           <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
-            <VendorEvidenceTimeline
-              vendorId={vendor.id}
-              vendorName={vendor.name}
-            />
+            <VendorEvidenceTimeline vendorId={vendor.id} vendorName={vendor.name} />
           </section>
 
-          {/* Internal-only: assessments list preview */}
           {!asVendor && (
             <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
               <div className="flex items-center justify-between">
@@ -237,9 +268,7 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
               </div>
 
               {vendor.assessments.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-200/60">
-                  No assessments yet.
-                </p>
+                <p className="mt-3 text-sm text-slate-200/60">No assessments yet.</p>
               ) : (
                 <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10">
                   {vendor.assessments.slice(0, 6).map((a) => (
@@ -277,9 +306,7 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
             <div className="space-y-2 text-[12px] text-slate-300">
               <div className="flex justify-between">
                 <span>Risk score</span>
-                <span className="font-semibold">
-                  {vendor.riskScore ?? "Not scored"}
-                </span>
+                <span className="font-semibold">{vendor.riskScore ?? "Not scored"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Assessments</span>
@@ -293,28 +320,22 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
               {!asVendor ? (
                 <div className="flex justify-between">
                   <span>Open issues</span>
-                  <span className="text-amber-300 font-semibold">
-                    {openIssues}
-                  </span>
+                  <span className="text-amber-300 font-semibold">{openIssues}</span>
                 </div>
               ) : (
                 <div className="flex justify-between">
                   <span>Trust status</span>
-                  <span className="font-semibold text-emerald-200">
-                    Verified
-                  </span>
+                  <span className="font-semibold text-emerald-200">Verified</span>
                 </div>
               )}
             </div>
 
-            {/* ✅ SECONDARY BOARD PACKET ENTRY (internal only) */}
             {!asVendor && (
               <div className="mt-4">
                 <BoardPacketCTA variant="ghost" label="View in Board Packet" />
               </div>
             )}
 
-            {/* Vendor-safe CTA */}
             {asVendor && (
               <div className="mt-4">
                 <Link
@@ -327,7 +348,7 @@ export default async function VendorDetailPage({ params, searchParams }: Props) 
             )}
           </section>
 
-          {/* Internal-only: critical issues callout */}
+          {/* ✅ Only show “Critical attention” when there are OPEN/IN_REVIEW critical issues */}
           {!asVendor && criticalOpen > 0 && (
             <section className="rounded-3xl border border-rose-500/25 bg-rose-500/10 px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-200">

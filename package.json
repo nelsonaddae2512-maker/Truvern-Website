@@ -12,7 +12,8 @@
     "sync:vendor-health": "node scripts/syncVendorRiskFromAssessments.js",
     "backfill:assessment-cia": "node scripts/backfillAssessmentCIA.js",
     "sync:vendor-risk-trends": "node scripts/syncVendorRiskTrends.js",
-    "sync:risk-alerts": "node scripts/generateRiskAlerts.js"
+    "sync:risk-alerts": "node scripts/generateRiskAlerts.js",
+    "seed:demo-assessment": "node scripts/seedDemoOngoingAssessment.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

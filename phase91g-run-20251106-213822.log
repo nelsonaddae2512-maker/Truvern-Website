@@ -1,0 +1,46 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251106213822
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 20024
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Working dir: C:\Users\MR.NELSON\Downloads\truvern
+Low disk space on C:. Free at least 6–8 GB before building. Free bytes: 2195120128
+PS>TerminatingError(): "Low disk space on C:. Free at least 6–8 GB before building. Free bytes: 2195120128"
+
+FATAL:
+
+
+PSMessageDetails      :
+Exception             : System.Management.Automation.RuntimeException: Low disk space on C:. Free at
+                        least 6–8 GB before building. Free bytes: 2195120128
+TargetObject          : Low disk space on C:. Free at least 6–8 GB before building. Free bytes:
+                        2195120128
+CategoryInfo          : OperationStopped: (Low disk space ...tes: 2195120128:String) [],
+                        RuntimeException
+FullyQualifiedErrorId : Low disk space on C:. Free at least 6–8 GB before building. Free bytes:
+                        2195120128
+ErrorDetails          :
+InvocationInfo        : System.Management.Automation.InvocationInfo
+ScriptStackTrace      : at Fail, <No file>: line 11
+                        at <ScriptBlock>, <No file>: line 29
+PipelineIterationInfo : {}
+
+
+
+**********************
+Windows PowerShell transcript end
+End time: 20251106213822
+**********************

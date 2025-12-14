@@ -1,0 +1,67 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251111215430
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File .\Phase134-FinalDeploy.ps1
+Process ID: 10932
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+=== Phase134: Final Production Deploy ===
+Repo Root: C:\Users\MR.NELSON\Downloads\truvern
+Step 1/4: Verify auth and link ...
+-> vercel whoami
+Vercel CLI 48.9.0
+> nelsonaddae2512-1445
+Project link OK.
+Step 2/4: Pull production env ...
+-> vercel pull --environment=production --scope nelson-ai-projects --yes
+Vercel CLI 48.9.0
+> Overwriting existing .vercel\.env.production.local file
+> Downloading `production` Environment Variables for nelson-ai-projects/truvern
+
+Changes:
++ VERCEL_OIDC_TOKEN (Updated)
+
+✅  Updated .vercel\.env.production.local file  [146ms]
+
+> Downloading project settings
+✅  Downloaded project settings to ~\Downloads\truvern\.vercel\project.json [1ms]
+Step 3/4: Deploying to production (cloud build) ...
+
+Vercel CLI 48.9.0
+Retrieving projectâ€¦
+Deploying nelson-ai-projects/truvern
+Uploading [--------------------] (0.0B/32.9KB)
+Uploading [=======-------------] (11.5KB/32.9KB)
+Uploading [===========---------] (19.2KB/32.9KB)
+Uploading [================----] (27.2KB/32.9KB)
+Uploading [====================] (32.9KB/32.9KB)
+Inspect: https://vercel.com/nelson-ai-projects/truvern/6YUTFnFFPxpkGXNXkEy4ygV2FvD9 [3s]
+Production: https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.app [3s]
+https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.appQueued
+Building
+Completing
+Step 4/4: Summary
+OrgId:   team_w9K9hcMjhS7tibjDKu5QCRVM
+Project: truvern
+Scope:   nelson-ai-projects
+Deployment URLs:
+ - https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.app
+ - https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.appQueued
+Opened https://truvern-4ld4tuc0v-nelson-ai-projects.vercel.app in browser.
+Log saved to: C:\Users\MR.NELSON\Downloads\truvern\Phase134-FinalDeploy.log
+Phase134 complete.
+**********************
+Windows PowerShell transcript end
+End time: 20251111215558
+**********************

@@ -1,0 +1,45 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251111211728
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File .\Phase132c-Deploy-CloudBuild-Fixed.ps1
+Process ID: 4624
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+=== Phase132c: Cloud Build Deploy (fixed summary) ===
+Repo Root: C:\Users\MR.NELSON\Downloads\truvern
+Using Vercel: C:\Users\MR.NELSON\AppData\Roaming\npm\vercel.ps1 (ps1)
+Auth check ...
+-> vercel whoami
+nelsonaddae2512-1445
+Logged in as: nelsonaddae2512-1445
+Project link OK.
+Pulling prod env (vercel pull) ...
+-> vercel pull --environment=production --scope nelson-ai-projects --yes
+Deploying (vercel deploy --prod) ...
+-> vercel deploy --prod --scope nelson-ai-projects --yes
+https://truvern-na4t3psyf-nelson-ai-projects.vercel.app
+
+Summary
+OrgId:   team_w9K9hcMjhS7tibjDKu5QCRVM
+Project: truvern
+Scope:   nelson-ai-projects
+Deployment URLs:
+ - https://truvern-na4t3psyf-nelson-ai-projects.vercel.app
+Opened https://truvern-na4t3psyf-nelson-ai-projects.vercel.app in browser.
+Log saved to: C:\Users\MR.NELSON\Downloads\truvern\Phase132c-Deploy-CloudBuild-Fixed.log
+Phase132c complete.
+**********************
+Windows PowerShell transcript end
+End time: 20251111211858
+**********************

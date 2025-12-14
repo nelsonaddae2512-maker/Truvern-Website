@@ -1,0 +1,191 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251011145508
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoExit -File .\run-neon-setup.ps1
+Process ID: 11488
+PSVersion: 5.1.19041.6392
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6392
+BuildVersion: 10.0.19041.6392
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+=== Running Neon setup ===
+Working dir: C:\Users\MR.NELSON\Downloads\truvern
+WARNING: ⚠️ Could not find C:\Users\MR.NELSON\Downloads\truvern\neon-setup.ps1 — create or rename your setup file to match this name.
+PS>TerminatingError(): "The term 'goto' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+The term 'goto' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+goto : The term 'goto' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and
+try again.
+At C:\Users\MR.NELSON\Downloads\truvern\run-neon-setup.ps1:19 char:3
++   goto FINALLY
++   ~~~~
+    + CategoryInfo          : ObjectNotFound: (goto:String) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\MR.NELSON\Downloads\truvern> # --- Bootstrap: create run-neon-setup.ps1 + neon-setup.ps1 and execute, keeping the window open ---
+$ErrorActionPreference = "Stop"
+$repoPath = "C:\Users\MR.NELSON\Downloads\truvern"
+Set-Location $repoPath
+
+# --------- neon-setup.ps1 content (actual Neon + Prisma setup) ----------
+$neonSetup = @'
+param()
+
+$ErrorActionPreference = "Stop"
+function Ensure-EndsWithSsl([string]$u){
+  if(-not $u) { return $u }
+  $u = $u.Trim().Trim("'`"")
+  if($u -like "psql *"){ $u = $u.Substring(5).Trim().Trim("'`"") }
+  if($u -notmatch '^postgresql://'){ throw "Invalid postgres URL: $u" }
+  if($u -notmatch 'sslmode='){ 
+    if($u -match '\?'){ return $u + '&sslmode=require' } else { return $u + '?sslmode=require' }
+  }
+  return $u
+}
+
+Write-Host "Paste your NEON URLs exactly as shown in the dashboard (no quotes).`n" -ForegroundColor Cyan
+$POOLER_URL_IN  = Read-Host "Pooling URL (with connection pooling)"
+$DIRECT_URL_IN  = Read-Host "Direct URL (no pooling)"
+
+if([string]::IsNullOrWhiteSpace($POOLER_URL_IN) -or [string]::IsNullOrWhiteSpace($DIRECT_URL_IN)){
+  throw "Both Pooling and Direct URLs are required."
+}
+
+$POOLER_URL = Ensure-EndsWithSsl $POOLER_URL_IN
+$DIRECT_URL = Ensure-EndsWithSsl $DIRECT_URL_IN
+
+# Write .env (UTF8 no BOM)
+$envBody = @"
+# --- generated $(Get-Date -Format s) ---
+DATABASE_URL=$POOLER_URL
+DIRECT_DATABASE_URL=$DIRECT_URL
+SHADOW_DATABASE_URL=$DIRECT_URL
+"@ + "`r`n"
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Join-Path (Get-Location) ".env"), $envBody, $utf8)
+Write-Host "`n✅ Wrote .env"
+Write-Host ("  DATABASE_URL host:        {0}" -f ([uri]$POOLER_URL).Host)
+Write-Host ("  DIRECT_DATABASE_URL host: {0}" -f ([uri]$DIRECT_URL).Host)
+
+# Ensure pg client lib
+if(-not (Test-Path ".\node_modules\pg")){
+  Write-Host "`nInstalling 'pg' npm client..." -ForegroundColor Yellow
+  npm i pg@8 --silent | Out-Null
+}
+
+# Create a tiny Node test that tries pooler then direct
+$testJs = @"
+const { Client } = require('pg');
+async function tryConn(url){
+  const c = new Client({ connectionString: url });
+  try {
+    await c.connect();
+    const r = await c.query('select current_user as u, current_database() as d, now() as now');
+    await c.end();
+    return { ok:true, info: r.rows[0] };
+  } catch (e) {
+    return { ok:false, err: e.message, code: e.code };
+  }
+}
+(async () => {
+  try {
+    const pooler = process.env.DATABASE_URL;
+    const direct = process.env.DIRECT_DATABASE_URL;
+
+    let res = await tryConn(pooler);
+    if(!res.ok){
+      console.log('POOLER FAIL:', res.code || '', res.err);
+      console.log('→ Trying DIRECT...');
+      res = await tryConn(direct);
+      if(!res.ok){
+        console.log('DIRECT FAIL:', res.code || '', res.err);
+        process.exit(2);
+      } else {
+        console.log('DIRECT OK:', res.info);
+        process.exit(0);
+      }
+    } else {
+      console.log('POOLER OK:', res.info);
+      process.exit(0);
+    }
+  } catch(e){
+    console.log('TEST ERROR:', e.message);
+    process.exit(3);
+  }
+})();
+"@
+[System.IO.File]::WriteAllText(".\__dbtest.js", $testJs, $utf8)
+
+Write-Host "`n🔎 Testing DB connectivity..."
+$env:DATABASE_URL = $POOLER_URL
+$env:DIRECT_DATABASE_URL = $DIRECT_URL
+node .\__dbtest.js
+if($LASTEXITCODE -ne 0){
+  Write-Host "`n❌ Could not connect with either URL." -ForegroundColor Red
+  Write-Host "Quick checks:"
+  Write-Host "  • Reset password for the role in Neon and copy BOTH URLs again."
+  Write-Host "  • Confirm user & DB name in the URL (e.g., neondb_owner / truvern)."
+  Write-Host "  • Paste raw postgresql://… (no quotes, no 'psql ...')."
+  Write-Host "  • Keep '?sslmode=require'."
+  exit 2
+}
+
+Write-Host "`n✅ DB login OK. Running Prisma..." -ForegroundColor Green
+npx prisma generate
+npx prisma db push
+Write-Host "`n🎉 Prisma is synced." -ForegroundColor Green
+'@
+
+# --------- run-neon-setup.ps1 content (wrapper + logging) ----------
+$wrapper = @'
+$ErrorActionPreference = "Stop"
+$repoPath = "C:\Users\MR.NELSON\Downloads\truvern"
+$log = Join-Path $repoPath "neon_setup.log"
+
+try { Stop-Transcript | Out-Null } catch {}
+Start-Transcript -Path $log -Append | Out-Null
+
+Write-Host "`n=== Running Neon setup ===" -ForegroundColor Cyan
+Write-Host "Working dir: $repoPath"
+
+$script = Join-Path $repoPath "neon-setup.ps1"
+
+if(-not (Test-Path $script)){
+  Write-Host "No neon-setup.ps1 found — creating it now..." -ForegroundColor Yellow
+  # The bootstrapper will have injected neon-setup.ps1 content before this wrapper is written.
+}
+
+try {
+  & $script
+  Write-Host "`n✅ Script finished." -ForegroundColor Green
+}
+catch {
+  Write-Host "`n❌ Script failed:" -ForegroundColor Red
+  Write-Host $_.Exception.Message
+  if ($_.InvocationInfo.PositionMessage) { Write-Host "`n" + $_.InvocationInfo.PositionMessage }
+}
+finally {
+  Stop-Transcript | Out-Null
+  Write-Host "`nLog saved to: $log"
+  Read-Host "`nPress Enter to close this window"
+}
+'@
+
+# Write files
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Join-Path $repoPath "neon-setup.ps1"), $neonSetup, $utf8)
+[System.IO.File]::WriteAllText((Join-Path $repoPath "run-neon-setup.ps1"), $wrapper,   $utf8)
+Write-Host "✅ Created neon-setup.ps1 and run-neon-setup.ps1"
+
+# Run wrapper (keeps window open and logs output)
+powershell -ExecutionPolicy Bypass -NoExit -File ".\run-neon-setup.ps1"
+
+✅ Created neon-setup.ps1 and run-neon-setup.ps1

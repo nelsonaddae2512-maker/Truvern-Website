@@ -1,0 +1,29 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251106171955
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 7260
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+• Checking Vercel auth...
+• Linking to nelson-addaes-projects/truvern ...
+✔ Linked.
+• Pulling production envs -> .env.__pulled ...
+• Removing existing STRIPE_SECRET_KEY (ok if not present)...
+• Setting STRIPE_SECRET_KEY (non-interactive, via type | vercel)...
+✖ Failed to set STRIPE_SECRET_KEY (exit Vercel CLI 48.7.1 Error: unknown or unexpected option: --project 1)
+**********************
+Windows PowerShell transcript end
+End time: 20251106172016
+**********************

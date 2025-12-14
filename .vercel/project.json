@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_KqdrlN9XjNpkN0YY0m2aQZItUWhK",
+  "orgId": "team_SMO6fCnoz48LHPOI4sgpKh3B",
+  "projectName": "truvern",
+  "settings": {
+    "createdAt": 1763943676538,
+    "framework": "nextjs",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "22.x"
+  }
+}

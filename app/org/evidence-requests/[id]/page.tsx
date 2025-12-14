@@ -1,0 +1,342 @@
+// app/org/evidence-requests/[id]/page.tsx
+import Link from "next/link";
+import prisma from "@/lib/prisma";
+import EvidenceRequestStatusBadge from "@/components/evidence-request-status-badge";
+import { revalidatePath } from "next/cache";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type ParamsPromise = Promise<{ id: string }>;
+type Props = { params: ParamsPromise };
+
+function fmtDate(d?: Date | string | null) {
+  if (!d) return "—";
+  const dt = typeof d === "string" ? new Date(d) : d;
+  return dt.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+export default async function OrgEvidenceRequestDetailPage({ params }: Props) {
+  const { id } = await params;
+  const requestId = Number(id);
+
+  if (!requestId || Number.isNaN(requestId)) {
+    return (
+      <main className="container-page py-16">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-50">Invalid request</h1>
+        <p className="mt-2 text-sm text-slate-200/70">Evidence request id is not valid.</p>
+        <Link href="/org/evidence-requests" className="mt-6 inline-block underline">
+          Back
+        </Link>
+      </main>
+    );
+  }
+
+  async function approveAction(formData: FormData) {
+    "use server";
+    const note = String(formData.get("reviewNote") ?? "").trim();
+
+    const reqRow = await prisma.evidenceRequest.findUnique({
+      where: { id: requestId },
+      select: { id: true, status: true },
+    });
+    if (!reqRow) return;
+
+    // Only approve if submitted (or allow re-approve safely)
+    if (!["SUBMITTED"].includes(String(reqRow.status))) return;
+
+    const latestIter = await prisma.evidenceRequestIteration.findFirst({
+      where: { evidenceRequestId: requestId },
+      orderBy: [{ submittedAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.evidenceRequest.update({
+        where: { id: requestId },
+        data: {
+          status: "APPROVED" as any,
+          reviewedAt: new Date(),
+          reviewNote: note || null,
+        } as any,
+      });
+
+      if (latestIter?.id) {
+        await tx.evidenceRequestIteration.update({
+          where: { id: latestIter.id },
+          data: {
+            status: "APPROVED" as any,
+            reviewedAt: new Date(),
+            reviewerNote: note || null,
+          } as any,
+        });
+      }
+    });
+
+    revalidatePath("/org/evidence-requests");
+    revalidatePath(`/org/evidence-requests/${requestId}`);
+  }
+
+  async function rejectAction(formData: FormData) {
+    "use server";
+    const note = String(formData.get("reviewNote") ?? "").trim();
+
+    const reqRow = await prisma.evidenceRequest.findUnique({
+      where: { id: requestId },
+      select: { id: true, status: true },
+    });
+    if (!reqRow) return;
+
+    if (!["SUBMITTED"].includes(String(reqRow.status))) return;
+
+    const latestIter = await prisma.evidenceRequestIteration.findFirst({
+      where: { evidenceRequestId: requestId },
+      orderBy: [{ submittedAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.evidenceRequest.update({
+        where: { id: requestId },
+        data: {
+          status: "REJECTED" as any,
+          reviewedAt: new Date(),
+          reviewNote: note || "Rejected — please resubmit with the requested updates.",
+        } as any,
+      });
+
+      if (latestIter?.id) {
+        await tx.evidenceRequestIteration.update({
+          where: { id: latestIter.id },
+          data: {
+            status: "REJECTED" as any,
+            reviewedAt: new Date(),
+            reviewerNote: note || "Rejected — please resubmit with the requested updates.",
+          } as any,
+        });
+      }
+    });
+
+    revalidatePath("/org/evidence-requests");
+    revalidatePath(`/org/evidence-requests/${requestId}`);
+  }
+
+  const reqRow = await prisma.evidenceRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      vendor: { select: { id: true, name: true } },
+      iterations: {
+        orderBy: { submittedAt: "desc" as any },
+        include: {
+          files: {
+            orderBy: [{ uploadedAt: "desc" as any }, { id: "desc" as any }] as any,
+            select: { id: true, title: true, kind: true, uploadedAt: true, fileUrl: true } as any,
+          } as any,
+        } as any,
+      } as any,
+    },
+  });
+
+  if (!reqRow) {
+    return (
+      <main className="container-page py-16">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-50">Not found</h1>
+        <p className="mt-2 text-sm text-slate-200/70">This evidence request doesn’t exist.</p>
+        <Link href="/org/evidence-requests" className="mt-6 inline-block underline">
+          Back
+        </Link>
+      </main>
+    );
+  }
+
+  const latestIter = (reqRow as any).iterations?.[0] ?? null;
+  const files = latestIter?.files ?? [];
+  const status = String((reqRow as any).status ?? "OPEN");
+
+  const canReview = status === "SUBMITTED";
+
+  return (
+    <main className="relative max-w-6xl mx-auto px-4 lg:px-6 py-12 lg:py-16">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Review
+          </div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-50">
+            {(reqRow as any).label ?? `Evidence request #${(reqRow as any).id}`}
+          </h1>
+
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-200/70">
+            <EvidenceRequestStatusBadge status={status as any} />
+            <span>
+              Vendor:{" "}
+              <span className="text-slate-50 font-semibold">
+                {(reqRow as any).vendor?.name ?? "—"}
+              </span>
+            </span>
+            <span>Due: {fmtDate((reqRow as any).dueAt)}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="/org/evidence-requests"
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
+          >
+            Back ↩
+          </Link>
+
+          {(reqRow as any).vendor?.id ? (
+            <Link
+              href={`/vendors/${(reqRow as any).vendor.id}`}
+              className="rounded-full border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-200 hover:bg-sky-500/15"
+            >
+              View vendor ↗
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-50">Submission</div>
+              <div className="text-xs text-slate-200/70">
+                Review the uploaded evidence and approve or reject.
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <form action={approveAction}>
+                <input type="hidden" name="reviewNote" value={String((reqRow as any).reviewNote ?? "")} />
+                <button
+                  type="submit"
+                  disabled={!canReview}
+                  className={[
+                    "rounded-full px-4 py-2 text-sm font-semibold",
+                    canReview
+                      ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                      : "bg-white/10 text-slate-200/60 cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  Approve
+                </button>
+              </form>
+
+              <form action={rejectAction}>
+                <input type="hidden" name="reviewNote" value={String((reqRow as any).reviewNote ?? "")} />
+                <button
+                  type="submit"
+                  disabled={!canReview}
+                  className={[
+                    "rounded-full px-4 py-2 text-sm font-semibold",
+                    canReview
+                      ? "bg-rose-500/90 text-white hover:bg-rose-500"
+                      : "bg-white/10 text-slate-200/60 cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  Reject
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <label className="text-xs font-semibold text-slate-200/70">Review note</label>
+            <form
+              action={async (formData: FormData) => {
+                "use server";
+                const note = String(formData.get("reviewNote") ?? "").trim();
+                await prisma.evidenceRequest.update({
+                  where: { id: requestId },
+                  data: { reviewNote: note || null } as any,
+                });
+                revalidatePath(`/org/evidence-requests/${requestId}`);
+              }}
+            >
+              <textarea
+                name="reviewNote"
+                defaultValue={String((reqRow as any).reviewNote ?? "")}
+                placeholder="Optional note shown to vendor (required if rejecting, recommended always)."
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-50 outline-none placeholder:text-slate-200/40 min-h-[96px]"
+              />
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="submit"
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10"
+                >
+                  Save note
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-4 text-xs text-slate-200/70">Files attached: {files.length}</div>
+
+            {files.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-200/60">No files submitted yet.</p>
+            ) : (
+              <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10">
+                {files.map((f: any) => (
+                  <div key={f.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-slate-50">
+                        {f.title ?? `File #${f.id}`}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-200/60">
+                        {String(f.kind ?? "OTHER")} • {fmtDate(f.uploadedAt)}
+                      </div>
+                    </div>
+
+                    {f.fileUrl ? (
+                      <a
+                        href={f.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-white/10"
+                      >
+                        Open file ↗
+                      </a>
+                    ) : (
+                      <span className="shrink-0 text-xs text-slate-200/50">No URL</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <aside className="rounded-3xl border border-slate-800 bg-slate-950/80 p-5">
+          <div className="text-sm font-semibold text-slate-50">Request metadata</div>
+
+          <div className="mt-4 space-y-3 text-sm text-slate-200/70">
+            <div className="flex justify-between gap-3">
+              <span>Kind</span>
+              <span className="text-slate-50 font-semibold">{String((reqRow as any).kind ?? "—")}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span>Created</span>
+              <span className="text-slate-50 font-semibold">{fmtDate((reqRow as any).createdAt)}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span>Submitted</span>
+              <span className="text-slate-50 font-semibold">{fmtDate((reqRow as any).submittedAt)}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span>Reviewed</span>
+              <span className="text-slate-50 font-semibold">{fmtDate((reqRow as any).reviewedAt)}</span>
+            </div>
+          </div>
+
+          {(reqRow as any).reviewNote ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs font-semibold text-slate-200/70">Review note</div>
+              <div className="mt-2 text-sm text-slate-50">{String((reqRow as any).reviewNote)}</div>
+            </div>
+          ) : null}
+        </aside>
+      </div>
+    </main>
+  );
+}

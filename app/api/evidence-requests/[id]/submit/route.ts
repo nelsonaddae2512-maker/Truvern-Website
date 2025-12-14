@@ -1,3 +1,4 @@
+// app/api/evidence-requests/[id]/submit/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth, currentUser } from "@clerk/nextjs/server";
@@ -11,6 +12,28 @@ function devBypassEnabled() {
   );
 }
 
+async function resolveVendorId() {
+  if (devBypassEnabled()) {
+    const v = Number(process.env.TRUVERN_DEV_VENDOR_ID ?? "");
+    return Number.isFinite(v) ? v : null;
+  }
+
+  const { userId } = auth();
+  if (!userId) return null;
+
+  const user = await currentUser();
+  const vendorIdRaw = (user?.publicMetadata as any)?.vendorId;
+
+  const vendorId =
+    typeof vendorIdRaw === "number"
+      ? vendorIdRaw
+      : typeof vendorIdRaw === "string"
+      ? Number(vendorIdRaw)
+      : NaN;
+
+  return Number.isFinite(vendorId) ? vendorId : null;
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -19,71 +42,36 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ ok: false, error: "Invalid request id" }, { status: 400 });
     }
 
-    // Determine vendor identity
-    let vendorId: number | undefined;
-
-    if (!devBypassEnabled()) {
-      const { userId } = auth();
-      if (!userId) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-
-      const user = await currentUser();
-      const vendorIdRaw = (user?.publicMetadata as any)?.vendorId;
-      vendorId =
-        typeof vendorIdRaw === "number"
-          ? vendorIdRaw
-          : typeof vendorIdRaw === "string"
-          ? Number(vendorIdRaw)
-          : undefined;
-
-      if (!Number.isFinite(vendorId as any)) {
-        return NextResponse.json({ ok: false, error: "Vendor account not linked" }, { status: 403 });
-      }
-    } else {
-      vendorId = Number(process.env.TRUVERN_DEV_VENDOR_ID ?? "");
-      if (!Number.isFinite(vendorId)) {
-        return NextResponse.json({ ok: false, error: "DEV vendorId not set" }, { status: 400 });
-      }
+    const vendorId = await resolveVendorId();
+    if (!vendorId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
     const notes = body?.notes ? String(body.notes) : null;
-    const kind = body?.kind ?? "OTHER";
-    const title = body?.title ? String(body.title) : "Evidence submission";
 
-    const er = await prisma.evidenceRequest.findUnique({ where: { id: requestId } });
-    if (!er) return NextResponse.json({ ok: false, error: "Request not found" }, { status: 404 });
-    if (er.vendorId !== vendorId) {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    const existing = await prisma.evidenceRequest.findUnique({
+      where: { id: requestId },
+      select: { id: true, vendorId: true, status: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Request not found" }, { status: 404 });
     }
-
-    // Best-effort create Evidence placeholder (works even before S3)
-    let createdEvidenceId: number | null = null;
-    try {
-      const ev: any = await (prisma as any).evidence?.create?.({
-        data: {
-          vendorId,
-          title,
-          description: notes,
-          kind,
-          uploadedAt: new Date(),
-        },
-        select: { id: true },
-      });
-      createdEvidenceId = ev?.id ?? null;
-    } catch {
-      // Evidence schema may differ; we still allow submission.
-      createdEvidenceId = null;
+    if (existing.vendorId !== vendorId) {
+      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
     const updated = await prisma.evidenceRequest.update({
       where: { id: requestId },
       data: {
         status: "SUBMITTED",
-        evidenceId: createdEvidenceId,
+        // We keep notes out of the DB for now (you can add submissionNotes in Phase 322 if desired)
+        updatedAt: new Date(),
       } as any,
     });
 
-    return NextResponse.json({ ok: true, request: updated, evidenceId: createdEvidenceId });
+    return NextResponse.json({ ok: true, request: updated, notesStored: false, notes });
   } catch (e: any) {
     return NextResponse.json(
       { ok: false, error: e?.message ?? "Failed to submit evidence request" },

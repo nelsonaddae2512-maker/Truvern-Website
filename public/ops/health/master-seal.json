@@ -1,0 +1,12 @@
+﻿{
+    "missingFiles":  [
+                         "next.config.js"
+                     ],
+    "sealFile":  "scripts\\logs\\integrity\\Phase203-MasterSeal-20251205_154246.json",
+    "storedSeal":  "23b0080159ba48f8382e277b4e1773317d16255cbc5137d51bd407ccced89056",
+    "verified":  false,
+    "check":  "master-seal",
+    "currentSeal":  "9f566b9130490a570338858aed0c070a356a2f5daa61b88ad639f5ae273a5077",
+    "checkedAt":  "2025-12-05T18:21:18.8113702-06:00",
+    "status":  "fail"
+}

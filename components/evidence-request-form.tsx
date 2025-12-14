@@ -1,3 +1,4 @@
+// components/evidence-request-form.tsx
 "use client";
 
 import { useState } from "react";
@@ -5,6 +6,7 @@ import { useState } from "react";
 type Props = {
   vendorId: number;
   organizationId: number | null;
+  onCreatedHref?: string; // optional redirect
 };
 
 const KINDS = [
@@ -17,7 +19,11 @@ const KINDS = [
   { value: "OTHER", label: "Other" },
 ];
 
-export default function EvidenceRequestForm({ vendorId, organizationId }: Props) {
+export default function EvidenceRequestForm({
+  vendorId,
+  organizationId,
+  onCreatedHref,
+}: Props) {
   const [kind, setKind] = useState("SOC2");
   const [label, setLabel] = useState("SOC 2 Type II Report");
   const [description, setDescription] = useState("");
@@ -47,6 +53,10 @@ export default function EvidenceRequestForm({ vendorId, organizationId }: Props)
 
       setMsg("Evidence request created.");
       setDescription("");
+
+      if (onCreatedHref) {
+        window.location.href = onCreatedHref;
+      }
     } catch (e: any) {
       setMsg(e?.message ?? "Failed to create request.");
     } finally {
@@ -91,6 +101,7 @@ export default function EvidenceRequestForm({ vendorId, organizationId }: Props)
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none"
+          placeholder="SOC 2 Type II Report"
         />
       </label>
 
@@ -101,7 +112,7 @@ export default function EvidenceRequestForm({ vendorId, organizationId }: Props)
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none"
-          placeholder="Please upload the most recent SOC 2 Type II report (last 12 months)…"
+          placeholder="Please upload the most recent report (last 12 months)…"
         />
       </label>
 
@@ -118,7 +129,7 @@ export default function EvidenceRequestForm({ vendorId, organizationId }: Props)
       </div>
 
       <div className="text-xs text-slate-200/50">
-        Enterprise note: this request is visible to the vendor in Vendor Portal → Evidence requests.
+        Enterprise note: the vendor will see this in Vendor Portal → Evidence requests.
       </div>
     </div>
   );

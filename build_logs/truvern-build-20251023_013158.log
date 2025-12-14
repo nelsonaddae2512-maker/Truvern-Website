@@ -1,0 +1,29 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251023013158
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\WINDOWS\system32\WindowsPowerShell\v1.0\PowerShell_ISE.exe
+Process ID: 13388
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+📁 Working in C:\Users\MR.NELSON\Downloads\truvern
+🟢 Node: v24.8.0  npm: 11.6.2
+🧩 Patched next.config.js to disable fs/path
+🧹 Cleaning install...
+PS>TerminatingError(node.exe): "The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: npm warn using --force Recommended protections disabled."
+>> TerminatingError(node.exe): "The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: npm warn using --force Recommended protections disabled."
+>> TerminatingError(node.exe): "The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: npm warn using --force Recommended protections disabled."
+**********************
+Windows PowerShell transcript end
+End time: 20251023013243
+**********************

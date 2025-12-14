@@ -1,0 +1,74 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251106171518
+Username: DESKTOP-43PR0M5\MR.NELSON
+RunAs User: DESKTOP-43PR0M5\MR.NELSON
+Configuration Name: 
+Machine: DESKTOP-43PR0M5 (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 7260
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+FATAL:
+
+
+PSMessageDetails      :
+Exception             : System.Management.Automation.ParseException: At
+                        C:\Users\MR.NELSON\Downloads\truvern\Phase90e-DowngradeLocal.ps1:83 char:113
+                        + ... ET_KEY $Environment --project $ProjectSlug --scope $OrgSlug < `"$($tm
+                        ...
+                        +                                                                 ~
+                        The '<' operator is reserved for future use.
+
+                        At C:\Users\MR.NELSON\Downloads\truvern\Phase90e-DowngradeLocal.ps1:101
+                        char:66
+                        + ... "Phase90e-DowngradeLocal complete: key fixed, synced, built & deploye
+                        ...
+                        +                                                                 ~
+                        The ampersand (&) character is not allowed. The & operator is reserved for
+                        future use; wrap an ampersand in double quotation marks ("&") to pass it as
+                        part of a string.
+
+                        At C:\Users\MR.NELSON\Downloads\truvern\Phase90e-DowngradeLocal.ps1:109
+                        char:34
+                        +   Write-Host "`nLog saved to $log" -ForegroundColor Yellow
+                        +                                  ~~~~~~~~~~~~~~~~~~~~~~~~~
+                        The string is missing the terminator: ".
+
+                        At C:\Users\MR.NELSON\Downloads\truvern\Phase90e-DowngradeLocal.ps1:14
+                        char:16
+                        + function Ok($m){ Write-Host "âœ” $m" -ForegroundColor Green }
+                        +                ~
+                        Missing closing '}' in statement block or type definition.
+                           at System.Management.Automation.ExceptionHandlingOps.CheckActionPreferenc
+                        e(FunctionContext funcContext, Exception exception)
+                           at System.Management.Automation.Interpreter.ActionCallInstruction`2.Run(I
+                        nterpretedFrame frame)
+                           at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstructi
+                        on.Run(InterpretedFrame frame)
+                           at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstructi
+                        on.Run(InterpretedFrame frame)
+TargetObject          :
+CategoryInfo          : ParserError: (:) [], ParseException
+FullyQualifiedErrorId : RedirectionNotSupported
+ErrorDetails          :
+InvocationInfo        : System.Management.Automation.InvocationInfo
+ScriptStackTrace      : at <ScriptBlock>, C:\Users\MR.NELSON\Downloads\truvern\Phase90e-Runner.ps1:
+                        line 11
+                        at <ScriptBlock>, <No file>: line 2
+PipelineIterationInfo : {}
+
+
+
+**********************
+Windows PowerShell transcript end
+End time: 20251106171518
+**********************

@@ -1,0 +1,8 @@
+vendorId,vendorName,tier,criticality,openCount,acceptedCount,resolvedCount,totalCount
+1,Acme Security,CRITICAL,HIGH,2,0,0,2
+9,CloudLedger,IMPORTANT,MEDIUM,2,0,0,2
+10,DataForge Subprocessor,CRITICAL,HIGH,1,0,0,1
+12,IdentityHub,IMPORTANT,HIGH,1,0,1,2
+13,LogLake,STANDARD,MEDIUM,1,0,0,1
+11,MailRunner,STANDARD,LOW,1,0,0,1
+14,Rana Linkages,STANDARD,HIGH,0,0,0,0

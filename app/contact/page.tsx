@@ -42,7 +42,7 @@ export default function ContactPage() {
       {/* Contact options */}
       <section className="space-y-6">
         {/* Primary card */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-lg shadow-black/40">
+        <div className="glass-soft rounded-3xl p-6 shadow-lg shadow-black/40">
           <h2 className="text-sm font-semibold text-slate-100 mb-2">
             Message the team
           </h2>
@@ -69,7 +69,7 @@ export default function ContactPage() {
                 id="name"
                 name="name"
                 type="text"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                className="input-glass text-sm"
                 placeholder="How should we address you?"
               />
             </div>
@@ -85,7 +85,7 @@ export default function ContactPage() {
                 id="email"
                 name="email"
                 type="email"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                className="input-glass text-sm"
                 placeholder="you@company.com"
               />
             </div>
@@ -101,24 +101,21 @@ export default function ContactPage() {
                 id="message"
                 name="message"
                 rows={4}
-                className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 resize-none"
+                className="input-glass text-sm"
                 placeholder="Share a quick overview of your vendor risk use case, timelines, or questions."
               />
             </div>
 
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-md shadow-emerald-500/40 hover:bg-emerald-400 transition"
-            >
+            <button type="submit" className="btn-primary">
               <span>Send message</span>
-              <span>↗</span>
+              <span aria-hidden>↗</span>
             </button>
           </form>
         </div>
 
         {/* Secondary cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="glass-soft rounded-2xl p-4">
             <h3 className="text-xs font-semibold text-slate-100 mb-1">
               Partnerships &amp; integrations
             </h3>
@@ -138,7 +135,7 @@ export default function ContactPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="glass-soft rounded-2xl p-4">
             <h3 className="text-xs font-semibold text-slate-100 mb-1">
               Support
             </h3>
@@ -168,10 +165,7 @@ export default function ContactPage() {
             Truvern Trust Network
           </Link>{" "}
           or{" "}
-          <Link
-            href="/pricing"
-            className="text-emerald-300 hover:text-emerald-200"
-          >
+          <Link href="/pricing" className="text-emerald-300 hover:text-emerald-200">
             pricing
           </Link>{" "}
           first and come back when you&apos;re ready.

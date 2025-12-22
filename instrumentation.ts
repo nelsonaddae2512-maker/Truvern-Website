@@ -1,6 +1,12 @@
 export async function register() {
-  // Only initialize if a DSN is present; keeps local/dev clean.
-  if (!process.env.SENTRY_DSN) return;
-  await import("./sentry.server.config");
-  await import("./sentry.client.config");
+  // Don’t instrument in dev — avoids pulling in OTel/Sentry tracing stack locally
+  if (process.env.NODE_ENV !== "production") return;
+
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
+
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+  }
 }

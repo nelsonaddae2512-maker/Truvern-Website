@@ -1,7 +1,7 @@
-// app/api/board-report/export/route.ts
+﻿// app/api/board-report/export/route.ts
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { computeVendorRiskMap } from "@/lib/risk/vendor-risk";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,180 +17,148 @@ function toCsv(rows: any[][]) {
   return rows.map((r) => r.map(csvEscape).join(",")).join("\n");
 }
 
-/**
- * ✅ Enum-safe status buckets using Prisma DMMF.
- * Prevents Prisma validation errors caused by status values not present in the enum.
- */
-function buildStatusBuckets(modelName: "Issue" | "Finding") {
-  const dmmf: any = (prisma as any)?._dmmf;
-  const models: any[] = dmmf?.datamodel?.models ?? [];
-  const enums: any[] = dmmf?.datamodel?.enums ?? [];
+function riskLabel(score: number) {
+  if (score >= 80) return "Low";
+  if (score >= 60) return "Moderate";
+  if (score >= 40) return "High";
+  return "Critical";
+}
 
-  const m = models.find((x) => x?.name === modelName);
-  const statusField = m?.fields?.find((f: any) => f?.name === "status");
-
-  const enumTypeName: string | null =
-    statusField?.kind === "enum" ? String(statusField.type) : null;
-
-  const enumDef = enumTypeName ? enums.find((e) => e?.name === enumTypeName) : null;
-
-  const values = new Set<string>(
-    (enumDef?.values ?? [])
-      .map((v: any) => (typeof v === "string" ? v : v?.name))
-      .filter(Boolean)
-  );
-
-  const pick = (candidates: string[]) => candidates.filter((s) => values.has(s));
-
-  const ACTIVE = pick([
-    "OPEN",
-    "IN_PROGRESS",
-    "IN_REMEDIATION",
-    "IN_REVIEW",
-    "PENDING",
-    "PENDING_REVIEW",
-  ]);
-
-  const ACCEPTED = pick([
-    "ACCEPTED_RISK",
-    "RISK_ACCEPTED",
-    "ACCEPTED",
-    "EXCEPTION_APPROVED",
-  ]);
-
-  const RESOLVED = pick(["RESOLVED", "CLOSED", "DONE", "MITIGATED"]);
-
-  const enumFound = values.size > 0;
-
-  const accepted = ACCEPTED.length ? ACCEPTED : enumFound ? [] : ["ACCEPTED_RISK"];
-  const resolved = RESOLVED.length ? RESOLVED : enumFound ? [] : ["RESOLVED", "CLOSED"];
-
-  // If enum exists but our label candidates don't match, treat "active" as everything else
-  const active =
-    ACTIVE.length
-      ? ACTIVE
-      : enumFound
-        ? [...values].filter((v) => !accepted.includes(v) && !resolved.includes(v))
-        : ["OPEN"];
-
-  return {
-    active,
-    accepted,
-    resolved,
-  };
+function bucketKey(score: number): "LOW" | "MODERATE" | "HIGH" | "CRITICAL" {
+  if (score >= 80) return "LOW";
+  if (score >= 60) return "MODERATE";
+  if (score >= 40) return "HIGH";
+  return "CRITICAL";
 }
 
 export async function GET() {
-  const IssueModel: any = (prisma as any).issue ?? (prisma as any).finding;
+  const vendors = await prisma.vendor.findMany({
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    take: 500,
+    select: {
+      id: true,
+      name: true,
+      updatedAt: true,
+      category: true as any,
+    } as any,
+  });
 
-  const modelName: "Issue" | "Finding" = (prisma as any).issue ? "Issue" : "Finding";
-  const { active, accepted, resolved } = buildStatusBuckets(modelName);
+  const list = vendors as any[];
+  const vendorIds = list.map((v) => v.id);
+  const riskMap = await computeVendorRiskMap(vendorIds);
 
-  const nowIso = new Date().toISOString();
+  // Detailed header
+  const header = [
+    "Vendor ID",
+    "Vendor Name",
+    "Category",
+    "Risk Score",
+    "Risk Label",
+    "Open",
+    "Accepted",
+    "Resolved",
+    "Open Critical",
+    "Open High",
+    "Open Medium",
+    "Open Low",
+    "Open Info",
+    "Top Drivers",
+    "Last Updated",
+  ];
 
-  const [vendorCount, evidenceCount, assessmentsCount, openIssueCount, acceptedRiskCount, resolvedCount] =
-    await Promise.all([
-      prisma.vendor.count().catch(() => 0),
-      prisma.evidence.count().catch(() => 0),
-      (prisma as any).assessment?.count?.().catch(() => 0) ?? 0,
+  // Build detail rows
+  const detailRows: any[][] = list.map((v) => {
+    const r =
+      riskMap.get(v.id) ??
+      ({
+        score: 100,
+        open: 0,
+        accepted: 0,
+        resolved: 0,
+        bySeverityOpen: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 },
+        topDrivers: [],
+      } as any);
 
-      IssueModel ? IssueModel.count({ where: { status: { in: active } } }).catch(() => 0) : 0,
-      IssueModel ? IssueModel.count({ where: { status: { in: accepted } } }).catch(() => 0) : 0,
-      IssueModel ? IssueModel.count({ where: { status: { in: resolved } } }).catch(() => 0) : 0,
-    ]);
+    const score = Number.isFinite(r.score) ? r.score : 100;
 
-  const vendors =
-    (await prisma.vendor
-      .findMany({
-        select: { id: true, name: true, riskScore: true, createdAt: true },
-        orderBy: [{ riskScore: "desc" as any }, { createdAt: "desc" as any }],
-        take: 500,
-      })
-      .catch(() => [])) ?? [];
-
-  const perVendor: Record<number, { open: number; accepted: number; resolved: number; total: number }> =
-    {};
-  for (const v of vendors as any[]) perVendor[v.id] = { open: 0, accepted: 0, resolved: 0, total: 0 };
-
-  if (IssueModel && vendors.length) {
-    try {
-      const grouped = await IssueModel.groupBy({
-        by: ["vendorId", "status"],
-        _count: { _all: true },
-        where: { vendorId: { in: (vendors as any[]).map((v) => v.id) } },
-      });
-
-      for (const row of grouped as any[]) {
-        const vid = row.vendorId;
-        const status = String(row.status ?? "");
-        const c = Number(row._count?._all ?? 0);
-        if (!perVendor[vid]) continue;
-
-        perVendor[vid].total += c;
-        if (active.includes(status)) perVendor[vid].open += c;
-        else if (accepted.includes(status)) perVendor[vid].accepted += c;
-        else if (resolved.includes(status)) perVendor[vid].resolved += c;
-      }
-    } catch {
-      await Promise.all(
-        (vendors as any[]).map(async (v) => {
-          const [o, a, r] = await Promise.all([
-            IssueModel.count({ where: { vendorId: v.id, status: { in: active } } }).catch(() => 0),
-            IssueModel.count({ where: { vendorId: v.id, status: { in: accepted } } }).catch(
-              () => 0
-            ),
-            IssueModel.count({ where: { vendorId: v.id, status: { in: resolved } } }).catch(() => 0),
-          ]);
-          perVendor[v.id] = { open: o, accepted: a, resolved: r, total: o + a + r };
-        })
-      );
-    }
-  }
-
-  const rows: any[][] = [];
-  rows.push(["GeneratedAt", nowIso]);
-  rows.push(["Vendors", vendorCount]);
-  rows.push(["EvidenceItems", evidenceCount]);
-  rows.push(["Assessments", assessmentsCount]);
-  rows.push(["OpenIssues", openIssueCount]);
-  rows.push(["AcceptedRisk", acceptedRiskCount]);
-  rows.push(["ResolvedFindings", resolvedCount]);
-  rows.push(["TotalGovernedItems", acceptedRiskCount + resolvedCount]);
-
-  rows.push([]);
-  rows.push([
-    "VendorId",
-    "VendorName",
-    "RiskScore",
-    "OpenIssues",
-    "AcceptedRisk",
-    "ResolvedFindings",
-    "TotalIssuesAllStatuses",
-  ]);
-
-  for (const v of vendors as any[]) {
-    const roll = perVendor[v.id] ?? { open: 0, accepted: 0, resolved: 0, total: 0 };
-    rows.push([
+    return [
       v.id,
       v.name ?? "",
-      v.riskScore ?? "",
-      roll.open,
-      roll.accepted,
-      roll.resolved,
-      roll.total,
-    ]);
+      v.category ?? "",
+      score,
+      riskLabel(score),
+      r.open ?? 0,
+      r.accepted ?? 0,
+      r.resolved ?? 0,
+      r.bySeverityOpen?.CRITICAL ?? 0,
+      r.bySeverityOpen?.HIGH ?? 0,
+      r.bySeverityOpen?.MEDIUM ?? 0,
+      r.bySeverityOpen?.LOW ?? 0,
+      r.bySeverityOpen?.INFO ?? 0,
+      (r.topDrivers ?? []).join("; "),
+      v.updatedAt instanceof Date
+        ? v.updatedAt.toISOString()
+        : String(v.updatedAt ?? ""),
+    ];
+  });
+
+  // Sort worst-risk first (Risk Score column index 3)
+  detailRows.sort((a, b) => Number(a[3]) - Number(b[3]));
+
+  // ---- Summary calculations (from the same computed data) ----
+  const totalVendors = detailRows.length;
+
+  let sumScore = 0;
+  const buckets = { LOW: 0, MODERATE: 0, HIGH: 0, CRITICAL: 0 };
+  const sevTotals = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
+  let openTotal = 0;
+  let acceptedTotal = 0;
+  let resolvedTotal = 0;
+
+  for (const row of detailRows) {
+    const score = Number(row[3]) || 0;
+    sumScore += score;
+    buckets[bucketKey(score)] += 1;
+
+    // Open/Accepted/Resolved indexes
+    openTotal += Number(row[5]) || 0;
+    acceptedTotal += Number(row[6]) || 0;
+    resolvedTotal += Number(row[7]) || 0;
+
+    // Severity totals indexes
+    sevTotals.CRITICAL += Number(row[8]) || 0;
+    sevTotals.HIGH += Number(row[9]) || 0;
+    sevTotals.MEDIUM += Number(row[10]) || 0;
+    sevTotals.LOW += Number(row[11]) || 0;
+    sevTotals.INFO += Number(row[12]) || 0;
   }
 
-  const csv = toCsv(rows);
+  const avgScore =
+    totalVendors > 0 ? Math.round(sumScore / totalVendors) : 100;
+
+  const generatedAt = new Date().toISOString();
+
+  // Summary rows (2-column "Key,Value" style)
+  const summaryRows: any[][] = [
+    ["Truvern Board Packet (CSV)"],
+    ["Generated At", generatedAt],
+    ["Vendors", totalVendors],
+    ["Portfolio Avg Score", avgScore],
+    ["Risk Buckets (count)", `Low ${buckets.LOW} | Moderate ${buckets.MODERATE} | High ${buckets.HIGH} | Critical ${buckets.CRITICAL}`],
+    ["Totals", `Open ${openTotal} | Accepted ${acceptedTotal} | Resolved ${resolvedTotal}`],
+    ["Open Severity Totals", `C ${sevTotals.CRITICAL} | H ${sevTotals.HIGH} | M ${sevTotals.MEDIUM} | L ${sevTotals.LOW} | I ${sevTotals.INFO}`],
+    [], // blank line
+  ];
+
+  const csv = toCsv([...summaryRows, header, ...detailRows]);
+
+  const filename = `truvern-board-packet-${new Date().toISOString().slice(0, 10)}.csv`;
 
   return new NextResponse(csv, {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="truvern-board-report-${nowIso.slice(
-        0,
-        10
-      )}.csv"`,
+      "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "no-store",
     },
   });

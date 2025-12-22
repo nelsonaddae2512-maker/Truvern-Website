@@ -2,16 +2,21 @@
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 import EvidenceRequestForm from "@/components/evidence-request-form";
+import { requireDbOrganization } from "@/lib/org-db";
 
 type ParamsPromise = Promise<{ id: string }>;
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function NewEvidenceRequestPage({
   params,
 }: {
   params: ParamsPromise;
 }) {
+  const org = await requireDbOrganization();
+
   const { id } = await params;
   const vendorId = Number(id);
 
@@ -23,15 +28,51 @@ export default async function NewEvidenceRequestPage({
     );
   }
 
-  const vendor = await prisma.vendor.findUnique({
-    where: { id: vendorId },
-    select: { id: true, name: true, organizationId: true },
+  // ✅ Org-scoped + includes deletedAt so we can block archived vendors
+  const vendor = await prisma.vendor.findFirst({
+    where: { id: vendorId, organizationId: org.id },
+    select: { id: true, name: true, organizationId: true, deletedAt: true },
   });
 
   if (!vendor) {
     return (
       <main className="max-w-4xl mx-auto px-4 py-12">
         <p className="text-sm text-rose-300">Vendor not found.</p>
+      </main>
+    );
+  }
+
+  // ✅ Phase 326E: guardrail — block evidence requests for archived vendors
+  if (vendor.deletedAt) {
+    return (
+      <main className="max-w-4xl mx-auto px-4 py-12">
+        <div className="rounded-3xl border border-amber-400/25 bg-amber-500/10 p-6">
+          <div className="text-xs tracking-[0.28em] text-amber-200/70">
+            ARCHIVED VENDOR
+          </div>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-50">
+            Evidence requests are disabled
+          </h1>
+          <p className="mt-2 text-sm text-amber-100/90">
+            <span className="font-semibold">{vendor.name}</span> is archived. Restore the vendor to create new evidence requests.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={`/vendors/${vendor.id}`}
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-white/10"
+            >
+              Back to vendor ↗
+            </Link>
+
+            <Link
+              href="/vendors?view=archived"
+              className="rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-500/15"
+            >
+              View archived list ↗
+            </Link>
+          </div>
+        </div>
       </main>
     );
   }

@@ -1,17 +1,12 @@
-// app/(clerk)/sign-in/[[...sign-in]]/page.tsx
+﻿// app/(clerk)/sign-in/[[...sign-in]]/page.tsx
 import { SignIn } from "@clerk/nextjs";
 
-export default function SignInPage() {
+export const runtime = "nodejs";
+
+export default function Page() {
   return (
-    <main className="flex min-h-[70vh] items-center justify-center px-4 py-12">
-      {/* 
-        We let Clerk fully control this subtree.
-        suppressHydrationWarning tells React to ignore server/client markup
-        differences here, which removes the hydration error overlay.
-      */}
-      <div className="w-full max-w-md" suppressHydrationWarning>
-        <SignIn afterSignInUrl="/vendors" />
-      </div>
-    </main>
+    <div className="min-h-[calc(100vh-64px)] bg-slate-950 flex items-center justify-center p-6">
+      <SignIn routing="path" path="/sign-in" redirectUrl="/vendors" />
+    </div>
   );
 }

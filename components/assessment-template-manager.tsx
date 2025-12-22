@@ -365,14 +365,11 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
         })),
       };
 
-      const res = await fetch(
-        `/api/assessment-templates/${detail.id}/structure`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`/api/assessment-templates/${detail.id}/structure`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       if (!res.ok) {
         throw new Error("Failed to save sections and questions");
       }
@@ -399,15 +396,12 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
           </div>
         </div>
 
-        <button
-          onClick={handleCreateTemplate}
-          className="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-[13px] font-semibold text-slate-950 shadow-md shadow-emerald-500/40 hover:bg-emerald-400 transition"
-        >
-          <span>＋</span>
+        <button onClick={handleCreateTemplate} className="btn-primary w-full mb-3">
+          <span aria-hidden>＋</span>
           <span>New template</span>
         </button>
 
-        <div className="space-y-1 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 max-h-[480px] overflow-y-auto">
+        <div className="glass-soft space-y-1 rounded-2xl p-2 max-h-[480px] overflow-y-auto">
           {templates.length === 0 ? (
             <p className="text-[11px] text-slate-500 px-2 py-3">
               No templates yet. Create your first SOC2 or baseline assessment to
@@ -440,9 +434,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                     </p>
                   )}
                   {t.category && (
-                    <p className="text-[10px] text-slate-500">
-                      {t.category}
-                    </p>
+                    <p className="text-[10px] text-slate-500">{t.category}</p>
                   )}
                 </button>
               );
@@ -460,7 +452,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
         )}
 
         {!selectedId || !detail ? (
-          <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-950/60 px-4 py-8 text-sm text-slate-400">
+          <div className="glass-soft rounded-3xl border border-dashed border-slate-700 bg-slate-950/60 px-4 py-8 text-sm text-slate-400">
             {loadingDetail
               ? "Loading template…"
               : "Select a template from the left to edit its details and questions."}
@@ -468,7 +460,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
         ) : (
           <>
             {/* Meta card */}
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4 mb-5 shadow-lg shadow-black/40">
+            <div className="glass-soft rounded-3xl px-4 py-4 mb-5 shadow-lg shadow-black/40">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div className="flex-1 space-y-2">
                   <div>
@@ -477,10 +469,8 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                     </label>
                     <input
                       value={detail.name}
-                      onChange={(e) =>
-                        updateDetailMeta({ name: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                      onChange={(e) => updateDetailMeta({ name: e.target.value })}
+                      className="input-glass mt-1 text-sm"
                       placeholder="e.g., SOC2 Core Controls, Vendor Cyber Hygiene"
                     />
                   </div>
@@ -495,7 +485,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                         onChange={(e) =>
                           updateDetailMeta({ standard: e.target.value })
                         }
-                        className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                        className="input-glass mt-1 text-[12px]"
                         placeholder="e.g., SOC 2, ISO 27001, Custom"
                       />
                     </div>
@@ -508,7 +498,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                         onChange={(e) =>
                           updateDetailMeta({ category: e.target.value })
                         }
-                        className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                        className="input-glass mt-1 text-[12px]"
                         placeholder="e.g., Security, Privacy, TPRM"
                       />
                     </div>
@@ -521,7 +511,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                         onChange={(e) =>
                           updateDetailMeta({ version: e.target.value })
                         }
-                        className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400"
+                        className="input-glass mt-1 text-[12px]"
                         placeholder="e.g., v1.0"
                       />
                     </div>
@@ -537,7 +527,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                         updateDetailMeta({ description: e.target.value })
                       }
                       rows={3}
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 resize-none"
+                      className="input-glass mt-1 text-sm resize-none"
                       placeholder="Short explanation of when to use this template and what it covers."
                     />
                   </div>
@@ -559,7 +549,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                   <button
                     onClick={saveMeta}
                     disabled={savingMeta}
-                    className="inline-flex items-center gap-2 rounded-full border border-emerald-400/70 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-60 disabled:cursor-default"
+                    className="btn-glass text-[11px] px-3 py-1.5 rounded-full"
                   >
                     {savingMeta ? "Saving…" : "Save details"}
                   </button>
@@ -572,29 +562,28 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
             </div>
 
             {/* Sections & questions */}
-            <div className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-lg shadow-black/40">
+            <div className="glass-soft rounded-3xl px-4 py-4 shadow-lg shadow-black/40">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Sections &amp; questions
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    Group questions into logical sections for vendors and
-                    reviewers.
+                    Group questions into logical sections for vendors and reviewers.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={addSection}
-                    className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-[11px] text-slate-200 hover:border-emerald-400 hover:text-emerald-200"
+                    className="btn-glass text-[11px] px-3 py-1.5 rounded-full"
                   >
-                    <span>＋</span>
+                    <span aria-hidden>＋</span>
                     <span>Section</span>
                   </button>
                   <button
                     onClick={saveStructure}
                     disabled={savingStructure}
-                    className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 shadow-md shadow-emerald-500/40 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-default"
+                    className="btn-primary text-[11px] px-3 py-1.5 rounded-full"
                   >
                     {savingStructure ? "Saving…" : "Save questions"}
                   </button>
@@ -611,7 +600,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                   {detail.sections.map((section, sIndex) => (
                     <div
                       key={sIndex}
-                      className="rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3"
+                      className="glass-soft rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3"
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 space-y-1">
@@ -620,18 +609,16 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                             onChange={(e) =>
                               updateSection(sIndex, { title: e.target.value })
                             }
-                            className="w-full rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-[13px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400"
+                            className="input-glass text-[13px]"
                             placeholder={`Section ${sIndex + 1} title`}
                           />
                           <textarea
                             value={section.description ?? ""}
                             onChange={(e) =>
-                              updateSection(sIndex, {
-                                description: e.target.value,
-                              })
+                              updateSection(sIndex, { description: e.target.value })
                             }
                             rows={2}
-                            className="w-full rounded-lg border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-[12px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400 resize-none"
+                            className="input-glass text-[12px] resize-none"
                             placeholder="Optional section description visible to vendors."
                           />
                         </div>
@@ -652,7 +639,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                           section.questions.map((q, qIndex) => (
                             <div
                               key={qIndex}
-                              className="rounded-xl border border-slate-800 bg-slate-950 px-2 py-2"
+                              className="glass-soft rounded-xl border border-slate-800 bg-slate-950 px-2 py-2"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 space-y-1">
@@ -663,7 +650,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                                         prompt: e.target.value,
                                       })
                                     }
-                                    className="w-full rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1.5 text-[13px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400"
+                                    className="input-glass text-[13px]"
                                     placeholder="Question prompt (e.g., Do you enforce MFA for all admin users?)"
                                   />
                                   <textarea
@@ -674,14 +661,12 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                                       })
                                     }
                                     rows={2}
-                                    className="w-full rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400 resize-none"
+                                    className="input-glass text-[11px] resize-none"
                                     placeholder="Optional guidance for the vendor filling this question."
                                   />
                                 </div>
                                 <button
-                                  onClick={() =>
-                                    removeQuestion(sIndex, qIndex)
-                                  }
+                                  onClick={() => removeQuestion(sIndex, qIndex)}
                                   className="text-[11px] text-slate-500 hover:text-rose-300"
                                 >
                                   ✕
@@ -700,16 +685,14 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                                         kind: e.target.value as QuestionKind,
                                       })
                                     }
-                                    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400"
+                                    className="input-glass mt-1 text-[11px]"
                                   >
                                     <option value="YES_NO">Yes / No</option>
                                     <option value="TEXT">Free text</option>
                                     <option value="SELECT">
                                       Single choice (select)
                                     </option>
-                                    <option value="MULTI_SELECT">
-                                      Multi-select
-                                    </option>
+                                    <option value="MULTI_SELECT">Multi-select</option>
                                     <option value="NUMBER">Number</option>
                                   </select>
                                 </div>
@@ -724,7 +707,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                                         optionsText: e.target.value,
                                       })
                                     }
-                                    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400"
+                                    className="input-glass mt-1 text-[11px]"
                                     placeholder="Yes, No, N/A"
                                   />
                                 </div>
@@ -743,7 +726,7 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                                             : Number(e.target.value),
                                       })
                                     }
-                                    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400"
+                                    className="input-glass mt-1 text-[11px]"
                                     placeholder="e.g., 10"
                                   />
                                 </div>
@@ -754,11 +737,9 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
                                   <input
                                     value={q.key ?? ""}
                                     onChange={(e) =>
-                                      updateQuestion(sIndex, qIndex, {
-                                        key: e.target.value,
-                                      })
+                                      updateQuestion(sIndex, qIndex, { key: e.target.value })
                                     }
-                                    className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-[11px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/60 focus:border-emerald-400"
+                                    className="input-glass mt-1 text-[11px]"
                                     placeholder="e.g., access_control.mfa_enabled"
                                   />
                                 </div>
@@ -783,9 +764,9 @@ export default function AssessmentTemplateManager({ initialTemplates }: Props) {
 
                         <button
                           onClick={() => addQuestion(sIndex)}
-                          className="mt-1 inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[11px] text-slate-200 hover:border-emerald-400 hover:text-emerald-200"
+                          className="btn-glass mt-1 text-[11px] px-2.5 py-1 rounded-full"
                         >
-                          <span>＋</span>
+                          <span aria-hidden>＋</span>
                           <span>Add question</span>
                         </button>
                       </div>

@@ -1,0 +1,657 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * -------------------------------------------------------
+ * ENUMS
+ * -------------------------------------------------------
+ */
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  ANALYST
+  VIEWER
+  VENDOR // external/vendor user
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum VendorTier {
+  CRITICAL
+  IMPORTANT
+  STANDARD
+}
+
+enum VendorCriticality {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AssessmentStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  ACCEPTED_RISK
+}
+
+enum EvidenceKind {
+  POLICY
+  REPORT
+  SCREENSHOT
+  CERTIFICATE
+  OTHER
+}
+
+// PHASE 321 — Evidence Requests (vendor-facing tasks)
+enum EvidenceRequestStatus {
+  OPEN
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// PHASE 321 — Evidence request kinds (doc types)
+enum EvidenceRequestKind {
+  SOC2
+  ISO27001
+  POLICY
+  PEN_TEST
+  BCP_DRP
+  DPIA
+  OTHER
+}
+
+// PHASE 317A — Question type enum for assessment builder (richer type system)
+enum AssessmentQuestionType {
+  TEXT          // Freeform text response
+  YES_NO        // Yes / No
+  SELECT        // Single choice from a set
+  MULTI_SELECT  // Multiple choices
+  NUMBER        // Numeric input (for counts, days, etc.)
+}
+
+// Existing/legacy question type enum (kept for compatibility)
+// EXTENDED to support new UI-friendly values.
+enum QuestionType {
+  BOOLEAN
+  TEXT
+  MULTI_CHOICE
+  YES_NO
+  NUMBER
+  MULTIPLE_CHOICE
+  FILE_UPLOAD
+}
+
+/**
+ * -------------------------------------------------------
+ * CORE MULTI-TENANT MODELS
+ * -------------------------------------------------------
+ */
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  memberships         OrgMembership[]
+  users               User[]               @relation("OrgUsers")
+  vendors             Vendor[]
+  assessments         Assessment[]
+  evidence            Evidence[]
+  issues              Issue[]
+  assessmentTemplates AssessmentTemplate[]
+  trustProfiles       TrustProfile[]
+  subscriptions       Subscription[]
+  usageEvents         UsageEvent[]
+  invites             InviteToken[]
+
+  // PHASE 321 — Evidence Requests
+  evidenceRequests    EvidenceRequest[]
+
+  // PHASE 325A — Global Activity Feed
+  activityEvents      ActivityEvent[]
+
+  @@unique([name])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clerkId   String?  @unique
+
+  // Primary organization (optional, for quick linking)
+  organization   Organization? @relation("OrgUsers", fields: [organizationId], references: [id])
+  organizationId Int?
+
+  memberships      OrgMembership[]
+  uploadedEvidence Evidence[]
+  createdIssues    Issue[] @relation("IssueCreatedBy")
+  assignedIssues   Issue[] @relation("IssueAssignedTo")
+}
+
+model OrgMembership {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  organizationId Int
+  role           OrgRole
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+}
+
+/**
+ * -------------------------------------------------------
+ * PHASE 325A — GLOBAL ACTIVITY FEED
+ * -------------------------------------------------------
+ */
+
+model ActivityEvent {
+  id             Int      @id @default(autoincrement())
+
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  actorUserId    String?   // Clerk user id (null = system)
+  actorName      String?
+  actorEmail     String?
+
+  vendorId       Int?
+  vendor         Vendor?   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  type           String    // e.g. VENDOR_CREATED, EVIDENCE_ADDED
+  title          String
+  description    String?
+
+  metadata       Json?
+
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([vendorId, createdAt])
+  @@index([type, createdAt])
+}
+
+/**
+ * -------------------------------------------------------
+ * VENDORS & TRUST NETWORK
+ * -------------------------------------------------------
+ */
+
+model Vendor {
+  id             Int                @id @default(autoincrement())
+  organizationId Int
+  name           String
+  slug           String             @unique
+  category       String?
+  tier           VendorTier?
+  criticality    VendorCriticality?
+  riskScore      Int?
+  status         String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+
+  organization   Organization         @relation(fields: [organizationId], references: [id])
+  assessments    Assessment[]
+  evidence       Evidence[]
+  issues         Issue[]
+  trustProfile   TrustProfile?
+  usageEvents    UsageEvent[]
+  shareTokens    VendorShareToken[]
+
+  // PHASE 321 — Evidence Requests
+  evidenceRequests EvidenceRequest[]
+
+  // PHASE 325A — Global Activity Feed
+  activityEvents   ActivityEvent[]
+
+  // Trend summary flags
+  riskTrend30d  String?
+  riskTrend90d  String?
+  riskSnapshots VendorRiskSnapshot[]
+  riskAlerts    VendorRiskAlert[]
+
+  @@unique([organizationId, name])
+}
+
+model VendorRiskAlert {
+  id         Int       @id @default(autoincrement())
+  vendor     Vendor    @relation(fields: [vendorId], references: [id])
+  vendorId   Int
+  type       String
+  message    String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([vendorId, type, resolvedAt])
+}
+
+model TrustProfile {
+  id             Int      @id @default(autoincrement())
+  vendorId       Int      @unique
+  organizationId Int
+  isPublic       Boolean  @default(false)
+  publicSlug     String?  @unique
+  headline       String?
+  summary        String?
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  vendor        Vendor       @relation(fields: [vendorId], references: [id])
+  organization  Organization @relation(fields: [organizationId], references: [id])
+  links         TrustLink[]
+}
+
+model VendorShareToken {
+  id        Int       @id @default(autoincrement())
+  vendorId  Int
+  token     String    @unique
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@index([expiresAt])
+}
+
+model TrustLink {
+  id             Int       @id @default(autoincrement())
+  trustProfileId Int
+  token          String    @unique
+  label          String?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  trustProfile TrustProfile @relation(fields: [trustProfileId], references: [id])
+}
+
+/**
+ * -------------------------------------------------------
+ * PHASE 321/322 — EVIDENCE REQUESTS + ITERATIONS
+ * -------------------------------------------------------
+ */
+
+model EvidenceRequest {
+  id             Int                   @id @default(autoincrement())
+  vendorId       Int
+  organizationId Int?
+  requestedBy    String?
+  kind           EvidenceRequestKind   @default(OTHER)
+  label          String
+  description    String?
+  dueAt          DateTime?
+  status         EvidenceRequestStatus @default(OPEN)
+
+  // Legacy: optional link to a single Evidence item (kept for backward compatibility)
+  evidenceId     Int?
+
+  // Legacy direct relation (kept)
+  evidence       Evidence[]
+
+  // PHASE 322 — submissions history
+  iterations     EvidenceRequestIteration[]
+
+  // lifecycle timestamps (request-level)
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  reviewNote     String?
+
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  vendor         Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([vendorId, status])
+  @@index([organizationId])
+}
+
+model EvidenceRequestIteration {
+  id                Int                   @id @default(autoincrement())
+  evidenceRequestId  Int
+  status             EvidenceRequestStatus @default(SUBMITTED)
+
+  submittedBy        String?
+  submittedAt        DateTime?            @default(now())
+
+  reviewedAt         DateTime?
+  reviewerNote       String?
+
+  createdAt          DateTime             @default(now())
+
+  evidenceRequest    EvidenceRequest @relation(fields: [evidenceRequestId], references: [id], onDelete: Cascade)
+  files              Evidence[]
+
+  @@index([evidenceRequestId, submittedAt])
+}
+
+/**
+ * -------------------------------------------------------
+ * ASSESSMENTS, QUESTIONS & ANSWERS
+ * -------------------------------------------------------
+ */
+
+model AssessmentTemplate {
+  id             Int      @id @default(autoincrement())
+  organizationId Int?
+  name           String
+  description    String?
+  standard       String?
+
+  code        String?  @unique
+  category    String?
+  version     String?
+  isActive    Boolean  @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization?       @relation(fields: [organizationId], references: [id])
+  sections     AssessmentSection[]
+  questions    AssessmentQuestion[]
+  assessments  Assessment[]
+}
+
+model AssessmentSection {
+  id          Int       @id @default(autoincrement())
+  templateId  Int
+  title       String
+  description String?
+  order       Int       @default(0)
+  weight      Float?
+
+  template    AssessmentTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions   AssessmentQuestion[]
+}
+
+model AssessmentQuestion {
+  id         Int      @id @default(autoincrement())
+
+  templateId Int?
+  sectionId  Int?
+  orderIndex Int
+  text       String
+
+  helpText   String?
+  description String?
+  category    String?
+
+  type       QuestionType
+  richType   AssessmentQuestionType?
+
+  required   Boolean  @default(false)
+  weight     Int?
+
+  key        String?
+  options    Json?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template AssessmentTemplate? @relation(fields: [templateId], references: [id])
+  section  AssessmentSection?  @relation(fields: [sectionId], references: [id])
+  answers  AssessmentAnswer[]
+}
+
+model Assessment {
+  id                   Int              @id @default(autoincrement())
+  organizationId       Int
+  vendorId             Int
+  templateId           Int?
+  status               AssessmentStatus @default(DRAFT)
+
+  title                String?
+  dueAt                DateTime?
+
+  startedAt            DateTime?
+  submittedAt          DateTime?
+  completedAt          DateTime?
+  reopenedAt           DateTime?
+  archivedAt           DateTime?
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  score                Int?
+  confidentialityScore Int?
+  integrityScore       Int?
+  availabilityScore    Int?
+
+  organization Organization        @relation(fields: [organizationId], references: [id])
+  vendor       Vendor              @relation(fields: [vendorId], references: [id])
+  template     AssessmentTemplate? @relation(fields: [templateId], references: [id])
+  answers      AssessmentAnswer[]
+  issues       Issue[]
+  evidence     Evidence[]
+}
+
+model IssueEvent {
+  id        Int      @id @default(autoincrement())
+  issueId   Int
+  type      String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, createdAt])
+}
+
+model AssessmentAnswer {
+  id           Int      @id @default(autoincrement())
+  assessmentId Int
+  questionId   Int
+
+  value        String?  @db.Text
+  valueJson    Json?
+  riskImpact   Int?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assessment Assessment         @relation(fields: [assessmentId], references: [id])
+  question   AssessmentQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([assessmentId, questionId])
+}
+
+/**
+ * -------------------------------------------------------
+ * EVIDENCE
+ * -------------------------------------------------------
+ */
+
+model Evidence {
+  id Int @id @default(autoincrement())
+
+  vendorId       Int
+  organizationId Int
+  assessmentId   Int?
+  uploadedById   Int?
+
+  evidenceRequestId   Int?
+  iterationId         Int?
+
+  title       String
+  description String?
+  fileUrl     String?
+  kind        EvidenceKind
+  uploadedAt  DateTime     @default(now())
+  deletedAt   DateTime?
+
+  vendor       Vendor       @relation(fields: [vendorId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  assessment   Assessment?  @relation(fields: [assessmentId], references: [id])
+  uploadedBy   User?        @relation(fields: [uploadedById], references: [id])
+
+  evidenceRequest EvidenceRequest?          @relation(fields: [evidenceRequestId], references: [id], onDelete: SetNull)
+  iteration       EvidenceRequestIteration? @relation(fields: [iterationId], references: [id], onDelete: SetNull)
+
+  @@index([evidenceRequestId])
+  @@index([iterationId])
+}
+
+/**
+ * -------------------------------------------------------
+ * ISSUES / FINDINGS
+ * -------------------------------------------------------
+ */
+
+model Issue {
+  id             Int           @id @default(autoincrement())
+  organizationId Int
+  vendorId       Int
+  assessmentId   Int?
+  title          String
+  description    String?
+
+  severity       IssueSeverity @default(MEDIUM)
+  status         IssueStatus   @default(OPEN)
+
+  openedAt       DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+
+  dueAt          DateTime?
+  updatedAt      DateTime      @default(now()) @updatedAt
+
+  closedAt       DateTime?
+  createdById    Int?
+  assignedToId   Int?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  vendor       Vendor       @relation(fields: [vendorId], references: [id])
+  assessment   Assessment?  @relation(fields: [assessmentId], references: [id])
+  createdBy    User?        @relation("IssueCreatedBy", fields: [createdById], references: [id])
+  assignedTo   User?        @relation("IssueAssignedTo", fields: [assignedToId], references: [id])
+
+  events        IssueEvent[]
+
+  @@index([organizationId, vendorId])
+  @@index([status, severity])
+  @@index([dueAt])
+}
+
+/**
+ * -------------------------------------------------------
+ * BILLING & USAGE (Stripe-friendly)
+ * -------------------------------------------------------
+ */
+
+model BillingPlan {
+  id            Int      @id @default(autoincrement())
+  tier          PlanTier @unique
+  name          String
+  description   String?
+  stripePriceId String?  @unique
+  maxVendors    Int?
+  maxMembers    Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model VendorRiskSnapshot {
+  id       Int      @id @default(autoincrement())
+  vendor   Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId Int
+  score    Int?
+  takenAt  DateTime @default(now())
+
+  @@index([vendorId, takenAt])
+}
+
+model Subscription {
+  id               Int                @id @default(autoincrement())
+  organizationId   Int
+  planId           Int
+  status           SubscriptionStatus @default(INACTIVE)
+  stripeCustomerId String?            @unique
+  stripeSubId      String?            @unique
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  plan         BillingPlan  @relation(fields: [planId], references: [id])
+}
+
+model UsageEvent {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  vendorId       Int?
+  kind           String
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
+
+  @@index([organizationId, kind, createdAt])
+}
+
+/**
+ * -------------------------------------------------------
+ * INVITES
+ * -------------------------------------------------------
+ */
+
+model InviteToken {
+  id             Int       @id @default(autoincrement())
+  organizationId Int
+  email          String
+  role           OrgRole
+  token          String    @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, email])
+}

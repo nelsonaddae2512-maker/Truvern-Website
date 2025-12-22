@@ -19,34 +19,30 @@ function cleanItems(items: any): Required<Pick<Item, "title" | "fileUrl" | "kind
     .filter((x) => x.title && x.fileUrl);
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const requestId = Number(id);
-    if (Number.isNaN(requestId)) {
-      return NextResponse.json({ error: "Invalid request id" }, { status: 400 });
+    if (!Number.isFinite(requestId)) {
+      return NextResponse.json({ ok: false, error: "Invalid request id" }, { status: 400 });
     }
 
     const body = await req.json().catch(() => ({}));
 
     // Accept BOTH shapes:
     //  A) { evidenceIds: number[] }  (Phase 322 style)
-    //  B) { items: [{title,fileUrl,kind}] } (your current vendor submit component)
+    //  B) { items: [{title,fileUrl,kind}] } (current vendor submit component)
     const evidenceIdsFromBody: number[] = Array.isArray(body?.evidenceIds)
       ? body.evidenceIds
           .map((n: any) => Number(n))
-          .filter((n: number) => !Number.isNaN(n))
+          .filter((n: number) => Number.isFinite(n))
       : [];
 
     const items = cleanItems(body?.items);
 
-    const submittedBy =
-      typeof body?.submittedBy === "string" ? body.submittedBy : null;
+    const submittedBy = typeof body?.submittedBy === "string" ? body.submittedBy : null;
 
-    // Ensure request exists (+ vendor/org for creating evidence rows)
+    // ✅ Ensure request exists (+ vendor/org + archived guard)
     const reqRow = await prisma.evidenceRequest.findUnique({
       where: { id: requestId },
       select: {
@@ -54,23 +50,31 @@ export async function POST(
         status: true,
         vendorId: true,
         organizationId: true,
+        vendor: { select: { id: true, deletedAt: true } },
       },
     });
 
-    if (!reqRow) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!reqRow) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
-    // Only allow submit/resubmit if OPEN or REJECTED
-    if (!["OPEN", "REJECTED"].includes(String(reqRow.status))) {
+    // ✅ Archived vendor guardrail
+    if (reqRow.vendor?.deletedAt) {
       return NextResponse.json(
-        { error: "Request is not open for submission" },
+        { ok: false, error: "Vendor is archived. Restore to submit evidence." },
         { status: 409 }
       );
     }
 
-    // If caller didn't provide evidenceIds, we can create Evidence rows from items
+    // Only allow submit/resubmit if OPEN or REJECTED
+    if (!["OPEN", "REJECTED"].includes(String(reqRow.status))) {
+      return NextResponse.json(
+        { ok: false, error: "Request is not open for submission" },
+        { status: 409 }
+      );
+    }
+
     if (evidenceIdsFromBody.length === 0 && items.length === 0) {
       return NextResponse.json(
-        { error: "Provide either evidenceIds[] or items[]" },
+        { ok: false, error: "Provide either evidenceIds[] or items[]" },
         { status: 400 }
       );
     }
@@ -87,17 +91,14 @@ export async function POST(
         select: { id: true },
       });
 
-      // 2) Determine evidenceIds:
+      // 2) Determine evidenceIds
       let evidenceIds: number[] = evidenceIdsFromBody;
 
       // Create evidence from items if needed
       if (evidenceIds.length === 0 && items.length > 0) {
-        // If orgId is nullable, Evidence requires organizationId (non-null in your schema)
-        // So we must have orgId to create evidence.
+        // Evidence requires organizationId (non-null in your schema)
         if (!reqRow.organizationId) {
-          throw new Error(
-            "Cannot create evidence: evidence request has no organizationId."
-          );
+          throw new Error("Cannot create evidence: evidence request has no organizationId.");
         }
 
         const created = await Promise.all(
@@ -110,7 +111,7 @@ export async function POST(
                 iterationId: iter.id,
                 title: it.title,
                 fileUrl: it.fileUrl,
-                kind: it.kind as any, // EvidenceKind enum
+                kind: it.kind as any,
                 uploadedAt: new Date(),
               },
               select: { id: true },
@@ -121,7 +122,6 @@ export async function POST(
         evidenceIds = created.map((c) => c.id);
       } else {
         // 3) Attach existing evidence to this iteration + request
-        // (Make sure they are linked to this request for consistency)
         await tx.evidence.updateMany({
           where: { id: { in: evidenceIds } },
           data: {
@@ -150,7 +150,7 @@ export async function POST(
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message ?? "Unknown error" },
+      { ok: false, error: err?.message ?? "Unknown error" },
       { status: 500 }
     );
   }

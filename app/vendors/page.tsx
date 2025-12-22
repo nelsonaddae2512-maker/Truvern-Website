@@ -1,547 +1,406 @@
-"use client";
+﻿import Link from "next/link";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+import { requireDbOrganization } from "@/lib/org-db";
+import RiskPopover from "@/components/risk/risk-popover";
 
-import { useEffect, useState, FormEvent, ChangeEvent } from "react";
-import Link from "next/link";
-import VendorEvidenceTimeline from "@/components/vendor-evidence-timeline";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type Vendor = {
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
+
+type VendorRow = {
   id: number;
   name: string;
-  riskScore: number | null;
-  createdAt: string | null;
+  updatedAt: Date | string;
+  _count?: {
+    assessments?: number;
+    issues?: number;
+    evidence?: number;
+    evidenceRequests?: number;
+  };
 };
 
-const EVIDENCE_KIND_OPTIONS = [
-  { value: "REPORT", label: "Report" },
-  { value: "POLICY", label: "Policy" },
-  { value: "CERTIFICATE", label: "Certificate" },
-  { value: "SCREENSHOT", label: "Screenshot" },
-  { value: "OTHER", label: "Other" },
-];
+type IssueLite = {
+  vendorId: number | null;
+  status: string;
+  severity: string;
+  createdAt?: string | Date | null;
+};
 
-export default function VendorsPage() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function isOpenIssueStatus(status: string) {
+  const s = (status || "").toUpperCase();
+  return !["RESOLVED", "CLOSED", "DONE"].includes(s);
+}
 
-  const [name, setName] = useState("");
-  const [riskScore, setRiskScore] = useState<string>("");
-
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-
-  // Vendor search
-  const [vendorSearch, setVendorSearch] = useState("");
-
-  // Upload state
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadKind, setUploadKind] = useState<string>("REPORT");
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  // Vendor delete state
-  const [vendorDeleting, setVendorDeleting] = useState(false);
-  const [vendorDeleteError, setVendorDeleteError] = useState<string | null>(
-    null
-  );
-
-  // let timeline know when to refresh
-  const [evidenceRefreshKey, setEvidenceRefreshKey] = useState(0);
-
-  // Load vendors (only non-deleted; API handles that)
-  async function loadVendors() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const res = await fetch("/api/vendors", { cache: "no-store" });
-
-      const raw = await res.text();
-      let data: any = {};
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch {
-          // raw wasn't JSON, leave data as {}
-        }
-      }
-
-      if (!res.ok) {
-        const msg =
-          (data && (data.error as string)) ||
-          raw.trim() ||
-          `Failed to load vendors (HTTP ${res.status}).`;
-        throw new Error(msg);
-      }
-
-      const list: Vendor[] = Array.isArray(data)
-        ? data
-        : Array.isArray(data.vendors)
-        ? data.vendors
-        : [];
-
-      setVendors(list);
-
-      if (!selectedVendor && list.length > 0) {
-        setSelectedVendor(list[0]);
-      } else if (
-        selectedVendor &&
-        !list.some((v) => v.id === selectedVendor.id)
-      ) {
-        // selected vendor was deleted, pick first remaining or null
-        setSelectedVendor(list[0] ?? null);
-      }
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to load vendors.");
-      setVendors([]);
-      setSelectedVendor(null);
-    } finally {
-      setLoading(false);
-    }
+function severityPoints(sev: string) {
+  switch ((sev || "").toUpperCase()) {
+    case "CRITICAL":
+      return 10;
+    case "HIGH":
+      return 7;
+    case "MEDIUM":
+      return 4;
+    case "LOW":
+      return 1;
+    default:
+      return 2;
   }
+}
 
-  useEffect(() => {
-    loadVendors();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+function sevKey(sev: string) {
+  const s = (sev || "").toUpperCase();
+  if (s === "CRITICAL") return "critical";
+  if (s === "HIGH") return "high";
+  if (s === "MEDIUM") return "medium";
+  if (s === "LOW") return "low";
+  return "medium";
+}
 
-  async function handleCreateVendor(e: FormEvent) {
-    e.preventDefault();
+function scoreToLevel(score: number) {
+  if (score >= 75) return { label: "Critical", tone: "red" as const };
+  if (score >= 50) return { label: "High", tone: "orange" as const };
+  if (score >= 25) return { label: "Moderate", tone: "amber" as const };
+  return { label: "Low", tone: "green" as const };
+}
 
-    if (!name.trim()) {
-      setCreateError("Vendor name is required.");
-      return;
-    }
-
-    setCreating(true);
-    setCreateError(null);
-
-    try {
-      const res = await fetch("/api/vendors/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          riskScore:
-            riskScore === "" || riskScore == null ? null : Number(riskScore),
-        }),
-      });
-
-      const raw = await res.text();
-      let data: any = {};
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch {
-          throw new Error(
-            raw.trim() || "Server returned an invalid response."
-          );
-        }
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create vendor.");
-      }
-
-      const newVendor: Vendor = data.vendor;
-
-      setName("");
-      setRiskScore("");
-
-      await loadVendors();
-      setSelectedVendor(newVendor);
-      setVendorSearch(""); // reset search after create
-    } catch (err: any) {
-      setCreateError(err?.message ?? "Failed to create vendor.");
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files || e.target.files.length === 0) {
-      setUploadFile(null);
-      return;
-    }
-    setUploadFile(e.target.files[0]);
-  }
-
-  async function handleUploadEvidence(e: FormEvent) {
-    e.preventDefault();
-
-    if (!selectedVendor) {
-      setUploadError("Select a vendor first.");
-      return;
-    }
-    if (!uploadFile) {
-      setUploadError("Choose a file to upload.");
-      return;
-    }
-
-    setUploading(true);
-    setUploadError(null);
-
-    try {
-      const file = uploadFile;
-
-      const res = await fetch("/api/evidence/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendorId: selectedVendor.id,
-          title: uploadTitle || file.name,
-          fileName: file.name,
-          kind: uploadKind,
-        }),
-      });
-
-      const raw = await res.text();
-      let data: any = {};
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch {
-          throw new Error(
-            raw.trim() || "Server returned an invalid response."
-          );
-        }
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to upload evidence.");
-      }
-
-      setUploadTitle("");
-      setUploadFile(null);
-      setUploadKind("REPORT");
-
-      // tell timeline to refresh
-      setEvidenceRefreshKey((k) => k + 1);
-    } catch (err: any) {
-      setUploadError(err?.message ?? "Failed to upload evidence.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleDeleteVendor() {
-    if (!selectedVendor) return;
-
-    const confirmed = window.confirm(
-      `Delete vendor "${selectedVendor.name}"? This will permanently delete the vendor once all evidence is removed.`
-    );
-    if (!confirmed) return;
-
-    setVendorDeleting(true);
-    setVendorDeleteError(null);
-
-    try {
-      const res = await fetch(`/api/vendors/${selectedVendor.id}`, {
-        method: "DELETE",
-      });
-
-      let data: any = null;
-      try {
-        const raw = await res.text();
-        if (raw) data = JSON.parse(raw);
-      } catch {
-        // ignore parse errors
-      }
-
-      if (!res.ok) {
-        throw new Error(
-          data?.error || "Failed to delete vendor. Please try again."
-        );
-      }
-
-      await loadVendors();
-      // evidence timeline will automatically switch to new selected vendor or none
-      setEvidenceRefreshKey((k) => k + 1);
-    } catch (err: any) {
-      setVendorDeleteError(err?.message ?? "Failed to delete vendor.");
-    } finally {
-      setVendorDeleting(false);
-    }
-  }
-
-  // Client-side vendor filtering
-  const searchTerm = vendorSearch.trim().toLowerCase();
-  const filteredVendors =
-    searchTerm.length === 0
-      ? vendors
-      : vendors.filter((v) => v.name.toLowerCase().includes(searchTerm));
+function RiskBadge({ score }: { score: number }) {
+  const lvl = scoreToLevel(score);
+  const tone =
+    lvl.tone === "red"
+      ? "border-red-400/30 bg-red-500/15 text-red-200"
+      : lvl.tone === "orange"
+      ? "border-orange-400/30 bg-orange-500/15 text-orange-200"
+      : lvl.tone === "amber"
+      ? "border-amber-400/30 bg-amber-500/15 text-amber-200"
+      : "border-emerald-400/30 bg-emerald-500/15 text-emerald-200";
 
   return (
-    <main className="min-h-screen px-6 py-10 mx-auto max-w-6xl text-slate-50">
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold">Vendors</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Manage vendors and upload evidence in one workspace.
-        </p>
-      </header>
+    <span
+      className={clsx("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium", tone)}
+      title={`Risk score ${score}/100`}
+    >
+      <span className="h-2 w-2 rounded-full bg-current opacity-80" />
+      {lvl.label}
+      <span className="text-white/40">·</span>
+      <span className="tabular-nums">{score}</span>
+    </span>
+  );
+}
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)]">
-        {/* LEFT: Vendor list + create */}
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <h2 className="text-lg font-medium">Your vendors</h2>
-            <div className="relative w-64 max-w-full">
-              <input
-                className="w-full rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs outline-none focus:border-emerald-400"
-                placeholder="Search vendors by name…"
-                value={vendorSearch}
-                onChange={(e) => setVendorSearch(e.target.value)}
-              />
-            </div>
-          </div>
+function TrendArrow({ trend }: { trend: "up" | "down" | "flat" }) {
+  const t = trend === "up" ? "text-red-200" : trend === "down" ? "text-emerald-200" : "text-white/60";
+  const ch = trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
+  const label = trend === "up" ? "Rising risk" : trend === "down" ? "Improving risk" : "Stable risk";
+  return (
+    <span className={clsx("text-xs font-semibold", t)} title={label}>
+      {ch}
+    </span>
+  );
+}
 
-          {loading ? (
-            <p className="text-sm text-slate-400">Loading vendors…</p>
-          ) : error ? (
-            <p className="text-sm text-red-400">{error}</p>
-          ) : vendors.length === 0 ? (
-            <p className="text-sm text-slate-400 mb-4">
-              No vendors yet. Add your first vendor below.
-            </p>
-          ) : filteredVendors.length === 0 ? (
-            <p className="text-sm text-slate-400 mb-4">
-              No vendors match “{vendorSearch.trim()}”.
-            </p>
-          ) : (
-            <table className="w-full text-sm border-collapse mb-6">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-800">
-                  <th className="text-left py-2 pr-4 font-normal">Name</th>
-                  <th className="text-left py-2 pr-4 font-normal">
-                    Risk score
-                  </th>
-                  <th className="text-left py-2 font-normal">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredVendors.map((v) => {
-                  const isSelected = selectedVendor?.id === v.id;
-                  return (
-                    <tr
-                      key={v.id}
-                      className={`border-b border-slate-900/60 last:border-0 cursor-pointer ${
-                        isSelected ? "bg-slate-800/50" : ""
-                      }`}
-                      onClick={() => setSelectedVendor(v)}
-                    >
-                      <td className="py-2 pr-4">
-                        <span className="hover:text-emerald-300">
-                          {v.name}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4">
-                        {v.riskScore === null || v.riskScore === undefined
-                          ? "—"
-                          : v.riskScore}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {v.createdAt
-                          ? new Date(v.createdAt).toLocaleDateString()
-                          : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-slate-200">Add vendor</h3>
-            <button
-              onClick={loadVendors}
-              className="text-xs rounded-full border border-slate-700 px-3 py-1 hover:border-emerald-400"
-            >
-              Refresh list
-            </button>
-          </div>
-
-          <form
-            onSubmit={handleCreateVendor}
-            className="flex flex-col gap-4 max-w-xl"
-          >
-            <div>
-              <label className="block text-sm mb-1 text-slate-300">
-                Vendor name
-              </label>
-              <input
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Autos Place"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1 text-slate-300">
-                Initial risk score (optional)
-              </label>
-              <input
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-400"
-                value={riskScore}
-                onChange={(e) => setRiskScore(e.target.value)}
-                placeholder="0–100"
-                inputMode="numeric"
-              />
-            </div>
-
-            {createError && (
-              <p className="text-sm text-red-400">{createError}</p>
+function SevChips({
+  b,
+}: {
+  b: { critical: number; high: number; medium: number; low: number };
+}) {
+  const items = [
+    ["C", b.critical, "border-red-400/20 bg-red-500/10 text-red-200"] as const,
+    ["H", b.high, "border-orange-400/20 bg-orange-500/10 text-orange-200"] as const,
+    ["M", b.medium, "border-amber-400/20 bg-amber-500/10 text-amber-200"] as const,
+    ["L", b.low, "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"] as const,
+  ];
+  return (
+    <div className="min-h-[22px] flex flex-wrap items-center gap-1.5">
+      {items.map(([k, v, cls]) =>
+        v ? (
+          <span
+            key={k}
+            className={clsx(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums",
+              cls
             )}
+            title={`${k}: ${v}`}
+          >
+            {k} <span className="text-white/30">·</span> {v}
+          </span>
+        ) : null
+      )}
+    </div>
+  );
+}
 
-            <button
-              type="submit"
-              disabled={creating}
-              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
-            >
-              {creating ? "Creating…" : "Create vendor"}
-            </button>
-          </form>
-        </section>
+async function fetchVendorsSafe(orgId: number): Promise<VendorRow[]> {
+  try {
+    const rows = await prisma.vendor.findMany({
+      where: { organizationId: orgId } as any,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: 300,
+      select: {
+        id: true,
+        name: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            assessments: true,
+            issues: true,
+            evidence: true,
+            evidenceRequests: true,
+          },
+        },
+      } as any,
+    });
+    return rows as any;
+  } catch {
+    const rows = await prisma.vendor.findMany({
+      where: { organizationId: orgId } as any,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: 300,
+      select: { id: true, name: true, updatedAt: true } as any,
+    });
+    return rows as any;
+  }
+}
 
-        {/* RIGHT: Vendor workspace */}
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
-          <h2 className="text-lg font-medium mb-4">Vendor workspace</h2>
-
-          {!selectedVendor ? (
-            <p className="text-sm text-slate-400">
-              Select a vendor on the left to view details and upload evidence.
-            </p>
-          ) : (
-            <>
-              <div className="mb-6 flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold">
-                    {selectedVendor.name}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Created{" "}
-                    {selectedVendor.createdAt
-                      ? new Date(
-                          selectedVendor.createdAt
-                        ).toLocaleDateString()
-                      : "—"}
-                    {" · "}
-                    {selectedVendor.riskScore != null
-                      ? `Risk score ${selectedVendor.riskScore}`
-                      : "Risk score not set"}
-                  </p>
-
-                  {/* NEW: View trust profile + vendor workspace buttons */}
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <Link
-                      href={`/trust/${selectedVendor.id}`}
-                      className="rounded-full border border-slate-700 bg-slate-900 px-4 py-1.5 text-xs font-medium text-slate-50 hover:border-emerald-400 hover:bg-slate-800"
-                    >
-                      View trust profile
-                    </Link>
-                    <Link
-                      href={`/vendors/${selectedVendor.id}`}
-                      className="rounded-full border border-slate-700 bg-slate-900 px-4 py-1.5 text-xs font-medium text-slate-50 hover:border-emerald-400 hover:bg-slate-800"
-                    >
-                      View vendor workspace
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-1">
-                  {vendorDeleteError && (
-                    <p className="text-[10px] text-red-400 text-right max-w-xs">
-                      {vendorDeleteError}
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleDeleteVendor}
-                    disabled={vendorDeleting}
-                    className="mt-1 inline-flex items-center rounded-full border border-red-500 px-3 py-1 text-[11px] text-red-200 hover:bg-red-500/10 disabled:opacity-60"
-                  >
-                    {vendorDeleting ? "Deleting…" : "Delete vendor"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h4 className="text-sm font-medium mb-2">
-                  Upload evidence (temporary placeholder)
-                </h4>
-                <form
-                  onSubmit={handleUploadEvidence}
-                  className="flex flex-col gap-3"
-                >
-                  <div>
-                    <label className="block text-xs mb-1 text-slate-300">
-                      Evidence title (optional)
-                    </label>
-                    <input
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs outline-none focus:border-emerald-400"
-                      value={uploadTitle}
-                      onChange={(e) => setUploadTitle(e.target.value)}
-                      placeholder="e.g. SOC 2 report 2025"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <div className="flex-1">
-                      <label className="block text-xs mb-1 text-slate-300">
-                        File
-                      </label>
-                      <input
-                        type="file"
-                        onChange={handleFileChange}
-                        className="w-full text-xs text-slate-300"
-                      />
-                    </div>
-
-                    <div className="sm:w-48">
-                      <label className="block text-xs mb-1 text-slate-300">
-                        Evidence type
-                      </label>
-                      <select
-                        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs outline-none focus:border-emerald-400"
-                        value={uploadKind}
-                        onChange={(e) => setUploadKind(e.target.value)}
-                      >
-                        {EVIDENCE_KIND_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {uploadError && (
-                    <p className="text-xs text-red-400">{uploadError}</p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={uploading}
-                    className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
-                  >
-                    {uploading ? "Uploading…" : "Upload evidence"}
-                  </button>
-                </form>
-              </div>
-
-              {/* Shared evidence timeline */}
-              <VendorEvidenceTimeline
-                vendorId={selectedVendor.id}
-                vendorName={selectedVendor.name}
-                refreshKey={evidenceRefreshKey}
-              />
-            </>
+function GateCard({
+  title,
+  body,
+  primaryHref,
+  primaryLabel,
+  secondaryHref,
+  secondaryLabel,
+}: {
+  title: string;
+  body: string;
+  primaryHref: string;
+  primaryLabel: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+}) {
+  return (
+    <main className="container-page py-10">
+      <div className="glass-soft p-6">
+        <h1 className="text-2xl font-semibold text-white">{title}</h1>
+        <p className="mt-2 text-white/70">{body}</p>
+        <div className="mt-4 flex flex-wrap gap-3 text-sm">
+          <Link className="btn-primary" href={primaryHref}>
+            {primaryLabel}
+          </Link>
+          {secondaryHref && secondaryLabel && (
+            <Link className="btn-glass" href={secondaryHref}>
+              {secondaryLabel}
+            </Link>
           )}
-        </section>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+async function fetchIssuesSafe(vendorIds: number[]): Promise<IssueLite[]> {
+  // Try with createdAt first (for trend). If schema differs, fallback without it.
+  try {
+    const rows = await prisma.issue.findMany({
+      where: { vendorId: { in: vendorIds } } as any,
+      select: { vendorId: true, status: true, severity: true, createdAt: true } as any,
+      take: 5000,
+    });
+    return rows as any;
+  } catch {
+    try {
+      const rows = await prisma.issue.findMany({
+        where: { vendorId: { in: vendorIds } } as any,
+        select: { vendorId: true, status: true, severity: true } as any,
+        take: 5000,
+      });
+      return rows as any;
+    } catch {
+      return [];
+    }
+  }
+}
+
+export default async function VendorsPage() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return (
+      <GateCard
+        title="Vendors"
+        body="Please sign in to view vendors."
+        primaryHref="/sign-in"
+        primaryLabel="Sign in"
+        secondaryHref="/"
+        secondaryLabel="Home"
+      />
+    );
+  }
+
+  const org = await requireDbOrganization();
+
+  if ((org as any)?._needsOrgSelection) {
+    return (
+      <GateCard
+        title="Select an organization"
+        body="You're signed in, but no organization is selected yet. Choose an organization (or create one) to continue."
+        primaryHref="/select-org"
+        primaryLabel="Select organization"
+        secondaryHref="/vendors"
+        secondaryLabel="Retry vendors"
+      />
+    );
+  }
+
+  const dbOrgId = (org as any).id as number;
+
+  const vendors = await fetchVendorsSafe(dbOrgId);
+  const vendorIds = vendors.map((v) => v.id);
+
+  const issues = await fetchIssuesSafe(vendorIds);
+
+  const riskPtsByVendorId = new Map<number, number>();
+  const openByVendorId = new Map<number, number>();
+  const breakdownByVendorId = new Map<number, { critical: number; high: number; medium: number; low: number }>();
+  const recentPtsByVendorId = new Map<number, number>();
+
+  const RECENT_DAYS = 14;
+  const recentCutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
+
+  for (const it of issues) {
+    const vid = it.vendorId;
+    if (!vid) continue;
+    if (!isOpenIssueStatus(it.status)) continue;
+
+    openByVendorId.set(vid, (openByVendorId.get(vid) || 0) + 1);
+
+    const pts = severityPoints(it.severity);
+    riskPtsByVendorId.set(vid, (riskPtsByVendorId.get(vid) || 0) + pts);
+
+    const key = sevKey(it.severity);
+    const b = breakdownByVendorId.get(vid) || { critical: 0, high: 0, medium: 0, low: 0 };
+    (b as any)[key] = ((b as any)[key] || 0) + 1;
+    breakdownByVendorId.set(vid, b);
+
+    // recent bucket for trend (best-effort)
+    try {
+      const d = it.createdAt ? new Date(it.createdAt as any) : null;
+      if (d && d >= recentCutoff) {
+        recentPtsByVendorId.set(vid, (recentPtsByVendorId.get(vid) || 0) + pts);
+      }
+    } catch {}
+  }
+
+  const riskScore = (vendorId: number) => {
+    const pts = riskPtsByVendorId.get(vendorId) || 0;
+    return Math.max(0, Math.min(100, pts * 5));
+  };
+
+  const openIssuesCount = (vendorId: number) => openByVendorId.get(vendorId) || 0;
+
+  const breakdownForVendor = (vendorId: number) =>
+    breakdownByVendorId.get(vendorId) || { critical: 0, high: 0, medium: 0, low: 0 };
+
+  const trendForVendor = (vendorId: number): "up" | "down" | "flat" => {
+    const totalPts = riskPtsByVendorId.get(vendorId) || 0;
+    const recentPts = recentPtsByVendorId.get(vendorId) || 0;
+    const olderPts = Math.max(0, totalPts - recentPts);
+
+    if (totalPts === 0) return "flat";
+    if (recentPts > olderPts) return "up";
+    if (recentPts < olderPts) return "down";
+    return "flat";
+  };
+
+  return (
+    <main className="container-page py-10">
+      {/* Trust Network-style portfolio header */}
+      <section className="glass-soft p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold text-white">Vendors</h1>
+              <span className="pill">{vendors.length} total</span>
+            </div>
+            <p className="mt-1 text-sm text-white/60">
+              Your third-party portfolio and risk posture.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/vendors/new" className="btn-primary">
+              + New vendor
+            </Link>
+            <Link href="/board" className="btn-glass">
+              Board view
+            </Link>
+          </div>
+        </div>
+
+        {/* (UI only) search control for future client filtering */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <input className="input-glass max-w-md" placeholder="Search vendors (coming next)..." />
+          <span className="pill">Sort: Recently updated</span>
+        </div>
+      </section>
+
+      {/* List */}
+      <div className="mt-4 glass overflow-hidden">
+        <div className="hidden md:grid grid-cols-[2fr,1.4fr,1fr,1fr,1fr,auto] gap-3 px-5 py-3 text-xs text-white/50 border-b border-white/10">
+          <div>Vendor</div>
+          <div>Risk</div>
+          <div className="text-right">Assessments</div>
+          <div className="text-right">Open issues</div>
+          <div className="text-right">Evidence</div>
+          <div />
+        </div>
+
+        <div className="divide-y divide-white/10">
+          {vendors.map((v) => {
+            const assessments = v._count?.assessments ?? 0;
+            const evidence = v._count?.evidence ?? 0;
+            const openIssues = openIssuesCount(v.id);
+
+            const score = riskScore(v.id);
+            const trend = trendForVendor(v.id);
+            const b = breakdownForVendor(v.id);
+            const lvl = scoreToLevel(score);
+
+            return (
+              <Link key={v.id} href={`/vendors/${v.id}`} className="block hover:bg-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-[2fr,1.4fr,1fr,1fr,1fr,auto] gap-3 px-5 py-4 items-center">
+                  <div className="min-w-0">
+                    <div className="truncate text-white font-medium">{v.name}</div>
+                    <div className="mt-1 text-xs text-white/50">
+                      Updated {new Date(v.updatedAt as any).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-start gap-2">
+                    <div className="flex items-center gap-2">
+                      <RiskBadge score={score} />
+                      <TrendArrow trend={trend} />
+                      <RiskPopover score={score} label={lvl.label} breakdown={b} trend={trend} />
+                    </div>
+                    <SevChips b={b} />
+                  </div>
+
+                  <div className="text-white/70 text-sm md:text-right tabular-nums">{assessments}</div>
+                  <div className="text-white/70 text-sm md:text-right tabular-nums">{openIssues}</div>
+                  <div className="text-white/70 text-sm md:text-right tabular-nums">{evidence}</div>
+
+                  <div className="text-white/50 text-sm justify-self-end">View →</div>
+                </div>
+              </Link>
+            );
+          })}
+
+          {vendors.length === 0 && (
+            <div className="px-5 py-10 text-white/60 text-sm">No vendors yet. Create your first vendor.</div>
+          )}
+        </div>
       </div>
     </main>
   );

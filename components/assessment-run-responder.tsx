@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Question = {
   id: number;
@@ -18,6 +19,7 @@ type AnswerRow = {
   id: number;
   questionId: number | null;
   value?: any;
+  valueJson?: any;
   updatedAt?: string | null;
 };
 
@@ -25,6 +27,7 @@ type Props = {
   assessmentId: number;
   questions: Question[];
   initialAnswers: AnswerRow[];
+  initialStatus?: string;
 };
 
 function qLabel(q: Question) {
@@ -52,14 +55,72 @@ function normalizeBoolean(v: any): boolean | null {
   return null;
 }
 
-export default function AssessmentRunResponder({ assessmentId, questions, initialAnswers }: Props) {
-  const sorted = useMemo(() => [...questions].sort((a, b) => sortKey(a) - sortKey(b)), [questions]);
+function isAnsweredValue(t: string, v: any) {
+  if (t === "TEXT") return typeof v === "string" && v.trim().length > 0;
+  return normalizeBoolean(v) !== null;
+}
+
+/**
+ * IMPORTANT:
+ * - Our save API stores BOTH:
+ *   - value (string)
+ *   - valueJson (raw) when available
+ * We send BOTH so the server can keep "answered" accurate across schemas.
+ */
+function toDbPayload(t: string, v: any) {
+  if (t === "BOOLEAN" || t === "YES_NO") {
+    const b = normalizeBoolean(v);
+    if (b === null) return { value: null, valueJson: null };
+    return { value: b ? "true" : "false", valueJson: b };
+  }
+
+  if (t === "TEXT") {
+    const s = typeof v === "string" ? v : "";
+    const trimmed = s.trim();
+    if (!trimmed.length) return { value: null, valueJson: null };
+    return { value: trimmed, valueJson: trimmed };
+  }
+
+  if (v == null) return { value: null, valueJson: null };
+  return { value: String(v), valueJson: v };
+}
+
+async function safeJson(res: Response) {
+  const txt = await res.text().catch(() => "");
+  if (!txt) return null;
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return { ok: false, error: txt };
+  }
+}
+
+function pickInitialValue(a: AnswerRow | undefined) {
+  // Prefer valueJson when present, otherwise fall back to value.
+  if (!a) return undefined;
+  if (a.valueJson !== undefined && a.valueJson !== null) return a.valueJson;
+  if (a.value !== undefined) return a.value;
+  return undefined;
+}
+
+export default function AssessmentRunResponder({
+  assessmentId,
+  questions,
+  initialAnswers,
+  initialStatus,
+}: Props) {
+  const router = useRouter();
+
+  const sorted = useMemo(
+    () => [...questions].sort((a, b) => sortKey(a) - sortKey(b)),
+    [questions]
+  );
 
   const initialMap = useMemo(() => {
     const m = new Map<number, any>();
     for (const a of initialAnswers || []) {
       const qid = Number(a?.questionId);
-      if (Number.isFinite(qid)) m.set(qid, a?.value);
+      if (Number.isFinite(qid)) m.set(qid, pickInitialValue(a));
     }
     return m;
   }, [initialAnswers]);
@@ -76,40 +137,41 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>(
+    String(initialStatus ?? "IN_PROGRESS")
+  );
 
   const dirtyRef = useRef<Set<number>>(new Set());
   const timerRef = useRef<any>(null);
+  const completingRef = useRef(false);
 
   const answeredCount = useMemo(() => {
     let c = 0;
     for (const q of sorted) {
       const v = values[q.id];
       const t = qType(q);
-      if (t === "TEXT") {
-        if (typeof v === "string" && v.trim().length > 0) c++;
-      } else {
-        if (normalizeBoolean(v) !== null) c++;
-      }
+      if (isAnsweredValue(t, v)) c++;
     }
     return c;
   }, [sorted, values]);
+
+  const allAnswered = sorted.length > 0 && answeredCount === sorted.length;
 
   const score = useMemo(() => {
     let possible = 0;
     let earned = 0;
 
     for (const q of sorted) {
-      const pts = typeof q.points === "number" && Number.isFinite(q.points) ? q.points : 0;
+      const pts =
+        typeof q.points === "number" && Number.isFinite(q.points) ? q.points : 0;
       possible += pts;
 
       const t = qType(q);
       const v = values[q.id];
 
       if (t === "TEXT") {
-        // if text provided, award full points (simple default)
         if (typeof v === "string" && v.trim().length > 0) earned += pts;
       } else {
-        // boolean/yes-no: true earns points, false earns 0
         const b = normalizeBoolean(v);
         if (b === true) earned += pts;
       }
@@ -119,43 +181,95 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
     return { earned, possible, pct };
   }, [sorted, values]);
 
-  async function flushSave(forceAll = false) {
-    const dirty = dirtyRef.current;
-    const toSave = forceAll ? sorted.map((q) => q.id) : Array.from(dirty);
+  async function trySubmitIfComplete() {
+    if (!allAnswered) return;
+    if (completingRef.current) return;
+    if (String(status).toUpperCase() === "COMPLETED") return;
 
-    if (toSave.length === 0) return;
-
-    setSaving(true);
-    setError(null);
-    setSaveMsg(null);
-
+    completingRef.current = true;
     try {
+      const r = await fetch(`/api/assessment-runs/${assessmentId}/submit`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      const data = await safeJson(r);
+      if (!r.ok || !data?.ok) {
+        const msg = data?.error ?? `Submit failed (${r.status})`;
+        setError(msg);
+        return;
+      }
+
+      const nextStatus = data?.assessment?.status;
+      if (typeof nextStatus === "string") setStatus(nextStatus);
+      else setStatus("COMPLETED");
+
+      setError(null);
+      setSaveMsg("Complete");
+      router.refresh();
+    } finally {
+      completingRef.current = false;
+    }
+  }
+
+  async function postAnswersSingle(qids: number[]) {
+    // Use the hardened, internal upsert endpoint (org ownership enforced)
+    for (const qid of qids) {
+      const q = sorted.find((qq) => qq.id === qid);
+      const t = qType(q as any);
+      const { value, valueJson } = toDbPayload(t, values[qid]);
+
       const payload = {
         assessmentId,
-        answers: toSave.map((qid) => ({
-          questionId: qid,
-          value: values[qid],
-        })),
+        questionId: qid,
+        value,
+        valueJson,
       };
 
-      const res = await fetch("/api/assessment/answers", {
+      const res = await fetch("/api/assessment-answers/upsert", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
+      const j = await safeJson(res);
+
+      if (res.status === 401) throw new Error("Unauthorized");
+      if (res.status === 403) throw new Error("Forbidden");
+      if (!res.ok || (j && j.ok === false)) {
         throw new Error(j?.error || `Save failed (${res.status})`);
       }
 
+      const nextStatus = j?.assessment?.status;
+      if (typeof nextStatus === "string") setStatus(nextStatus);
+    }
+    return { ok: true };
+  }
+
+  async function flushSave(forceAll = false) {
+    const dirty = dirtyRef.current;
+    const toSave = forceAll ? sorted.map((q) => q.id) : Array.from(dirty);
+    if (toSave.length === 0) return;
+
+    setSaving(true);
+    setSaveMsg(null);
+    setError(null);
+
+    try {
+      await postAnswersSingle(toSave);
+
       dirty.clear();
+      setError(null);
       setSaveMsg("Saved");
+      router.refresh();
+
+      await trySubmitIfComplete();
     } catch (e: any) {
-      setError(String(e?.message ?? e));
+      setError(String(e?.message ?? "Server error"));
+      setSaveMsg(null);
     } finally {
       setSaving(false);
-      // clear the "Saved" message after a moment
       window.setTimeout(() => setSaveMsg(null), 1500);
     }
   }
@@ -177,15 +291,29 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
         <div>
           <div className="text-sm font-semibold text-slate-50">Questions</div>
           <div className="mt-1 text-xs text-slate-200/60">
-            Progress: <span className="font-semibold text-slate-50">{answeredCount}/{sorted.length}</span>{" "}
-            · Score: <span className="font-semibold text-slate-50">{score.earned}/{score.possible}</span>{" "}
-            {score.possible ? <span className="opacity-80">({score.pct}%)</span> : null}
+            Progress:{" "}
+            <span className="font-semibold text-slate-50">
+              {answeredCount}/{sorted.length}
+            </span>{" "}
+            · Score:{" "}
+            <span className="font-semibold text-slate-50">
+              {score.earned}/{score.possible}
+            </span>{" "}
+            {score.possible ? (
+              <span className="opacity-80">({score.pct}%)</span>
+            ) : null}
+            {" · "}
+            <span className="opacity-70">Status:</span>{" "}
+            <span className="font-semibold text-slate-50">{status}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {error ? <span className="text-xs text-rose-200">{error}</span> : null}
-          {saveMsg ? <span className="text-xs text-emerald-200">{saveMsg}</span> : null}
+          {saveMsg ? (
+            <span className="text-xs text-emerald-200">{saveMsg}</span>
+          ) : null}
+
           <button
             onClick={() => flushSave(true)}
             disabled={saving}
@@ -201,29 +329,26 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
           const t = qType(q);
           const qid = q.id;
           const v = values[qid];
+          const answered = isAnsweredValue(t, v);
 
           return (
-            <div key={qid} className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <div
+              key={qid}
+              className="rounded-xl border border-white/10 bg-black/20 p-4"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-xs font-semibold text-slate-200/60">
-                    Q{idx + 1} · {t || "—"} {typeof q.points === "number" ? `· ${q.points} pts` : ""}
+                    Q{idx + 1} · {t || "—"}{" "}
+                    {typeof q.points === "number" ? `· ${q.points} pts` : ""}
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-slate-50">{qLabel(q)}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-50">
+                    {qLabel(q)}
+                  </div>
                 </div>
 
                 <div className="shrink-0">
-                  {t === "TEXT" ? (
-                    typeof v === "string" && v.trim().length > 0 ? (
-                      <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
-                        Answered
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-slate-200/70">
-                        Unanswered
-                      </span>
-                    )
-                  ) : normalizeBoolean(v) !== null ? (
+                  {answered ? (
                     <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-200">
                       Answered
                     </span>
@@ -254,6 +379,7 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
                     >
                       Yes
                     </button>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -270,6 +396,7 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
                     >
                       No
                     </button>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -305,7 +432,8 @@ export default function AssessmentRunResponder({ assessmentId, questions, initia
 
                 {t !== "TEXT" && t !== "BOOLEAN" && t !== "YES_NO" && (
                   <div className="text-sm text-slate-200/60">
-                    This question type isn’t interactive yet: <span className="font-semibold">{t || "UNKNOWN"}</span>
+                    This question type isn’t interactive yet:{" "}
+                    <span className="font-semibold">{t || "UNKNOWN"}</span>
                   </div>
                 )}
               </div>

@@ -1,19 +1,28 @@
-﻿'use client';
+﻿"use client";
 
-
-import { ensureArray } from '@/app/lib/safe';
-export default function GlobalError({ error, reset }: { error: Error, reset: () => void }) {
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
-    <html>
-      <body style={{padding:'2rem', maxWidth:900, margin:'0 auto', lineHeight:1.6}}>
-        <h2>We hit a snag.</h2>
-        <p>{error?.message || 'An unexpected error occurred.'}</p>
-        <p>
-          <a href="/" style={{textDecoration:'underline'}}>Go back to Home</a>
-          {' '}|{' '}
-          <a href="/reports/board" style={{textDecoration:'underline'}}>Open Board Report</a>
-        </p>
-        <button onClick={() => reset()}>Try again</button>
+    <html lang="en">
+      <body className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center p-8">
+        <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-900/40 p-6">
+          <h1 className="text-xl font-semibold">Global app error</h1>
+          <pre className="mt-4 overflow-auto rounded-xl bg-black/30 p-4 text-xs text-slate-200">
+{String(error?.message || error)}
+{error?.digest ? `\n\nDigest: ${error.digest}` : ""}
+          </pre>
+          <button
+            onClick={() => reset()}
+            className="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold hover:bg-indigo-500"
+          >
+            Reload
+          </button>
+        </div>
       </body>
     </html>
   );

@@ -1,7 +1,11 @@
-// app/signup/page.tsx
-import { redirect } from "next/navigation";
+"use client";
 
-export default function LegacySignupRedirect() {
-  // Normalize old /signup → /sign-up
-  redirect("/sign-up");
+import { SignUp } from "@clerk/nextjs";
+
+export default function SignUpPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-950">
+      <SignUp redirectUrl="/issues" />
+    </div>
+  );
 }

@@ -98,6 +98,29 @@ async function safeJson(res: Response) {
   }
 }
 
+/**
+ * UI convenience normalization:
+ * - empty strings -> null (treat as "clear")
+ * - numbers: keep as number if finite; otherwise null
+ * - objects/arrays/booleans: pass through (API normalizes)
+ */
+function normalizeValueForSave(value: any): any {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  if (typeof value === "string") {
+    const s = value.trim();
+    return s.length ? s : null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  // boolean, object, array => pass through
+  return value;
+}
+
 export default function AssessmentRunEditor({
   assessmentId,
   initialStatus,
@@ -213,45 +236,7 @@ export default function AssessmentRunEditor({
     setCollapsed((p) => ({ ...p, [key]: !p[key] }));
   }
 
-  async function saveAnswer(questionId: number, value: any) {
-    if (status === "COMPLETED") return;
-
-    setSaveError(null);
-    setSaving((p) => ({ ...p, [questionId]: true }));
-
-    try {
-      // ✅ FIXED ENDPOINT
-      const r = await fetch("/api/assessment/answers", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assessmentId, questionId, value }),
-      });
-
-      const data = await safeJson(r);
-      if (!r.ok || !data?.ok) {
-        const msg = data?.error ?? `HTTP ${r.status}`;
-        throw new Error(msg);
-      }
-
-      setSavedTick((p) => ({ ...p, [questionId]: Date.now() }));
-
-      // If server auto-completed, reflect it immediately
-      const nextStatus = data?.assessment?.status;
-      if (typeof nextStatus === "string" && nextStatus !== status) {
-        setStatus(nextStatus);
-      }
-
-      // Refresh server-rendered progress/headers
-      router.refresh();
-    } catch (e: any) {
-      setSaveError(e?.message ?? "Save failed");
-    } finally {
-      setSaving((p) => ({ ...p, [questionId]: false }));
-    }
-  }
-
-  async function submitRun() {
+  async function submitRunInternal() {
     setSubmitError(null);
     setSubmitting(true);
     try {
@@ -262,13 +247,64 @@ export default function AssessmentRunEditor({
       const data = await safeJson(r);
       if (!r.ok || !data?.ok) throw new Error(data?.error ?? `HTTP ${r.status}`);
 
-      setStatus("COMPLETED");
+      const nextStatus = data?.assessment?.status;
+      setStatus(typeof nextStatus === "string" ? nextStatus : "COMPLETED");
       router.refresh();
+      return true;
     } catch (e: any) {
       setSubmitError(e?.message ?? "Submit failed");
+      return false;
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function saveAnswer(questionId: number, value: any) {
+    if (status === "COMPLETED" || status === "ARCHIVED") return;
+
+    setSaveError(null);
+    setSaving((p) => ({ ...p, [questionId]: true }));
+
+    try {
+      const normalized = normalizeValueForSave(value);
+
+      const r = await fetch("/api/assessment/answers", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assessmentId, questionId, value: normalized }),
+      });
+
+      const data = await safeJson(r);
+
+      // Locked/Completed => show clean message
+      if (r.status === 409) {
+        setSaveError(data?.error ?? "Assessment is locked");
+        return;
+      }
+
+      if (!r.ok || !data?.ok) {
+        const msg = data?.error ?? `HTTP ${r.status}`;
+        throw new Error(msg);
+      }
+
+      setSavedTick((p) => ({ ...p, [questionId]: Date.now() }));
+
+      const nextStatus = data?.assessment?.status;
+      if (typeof nextStatus === "string" && nextStatus !== status) {
+        setStatus(nextStatus);
+      }
+
+      router.refresh();
+    } catch (e: any) {
+      setSaveError(e?.message ?? "Save failed");
+    } finally {
+      setSaving((p) => ({ ...p, [questionId]: false }));
+    }
+  }
+
+  async function submitRun() {
+    await submitRunInternal();
   }
 
   async function reopenRun() {
@@ -292,9 +328,6 @@ export default function AssessmentRunEditor({
   }
 
   function questionMeta(q: Question, v: any) {
-    reminding: {
-      // noop label to keep diff minimal
-    }
     const t = (q.type ?? "").toUpperCase();
     const answered = isAnswered(v);
     const required = !!q.required;
@@ -382,7 +415,7 @@ export default function AssessmentRunEditor({
           <input
             type="checkbox"
             checked={checked}
-            disabled={status === "COMPLETED"}
+            disabled={status === "COMPLETED" || status === "ARCHIVED"}
             onChange={(e) => {
               const next = e.target.checked;
               setAnswers((p) => ({ ...p, [q.id]: next }));
@@ -401,7 +434,7 @@ export default function AssessmentRunEditor({
         <input
           type="number"
           value={shown}
-          disabled={status === "COMPLETED"}
+          disabled={status === "COMPLETED" || status === "ARCHIVED"}
           onChange={(e) => {
             const raw = e.target.value;
             const next = raw === "" ? "" : Number(raw);
@@ -417,7 +450,7 @@ export default function AssessmentRunEditor({
     return (
       <textarea
         value={textVal}
-        disabled={status === "COMPLETED"}
+        disabled={status === "COMPLETED" || status === "ARCHIVED"}
         onChange={(e) => setAnswers((p) => ({ ...p, [q.id]: e.target.value }))}
         onBlur={() => saveAnswer(q.id, answers[q.id])}
         rows={3}
@@ -432,6 +465,8 @@ export default function AssessmentRunEditor({
   const showResultsPanel = status === "COMPLETED";
   const resultsHref = `/assessment/runs/${assessmentId}/results`;
   const findingsHref = `/issues?assessmentId=${assessmentId}`;
+
+  const allAnswered = questions.length > 0 && overallAnswered === questions.length;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-5">
@@ -606,10 +641,11 @@ export default function AssessmentRunEditor({
                 <button
                   type="button"
                   onClick={submitRun}
-                  disabled={submitting}
+                  disabled={submitting || (status !== "COMPLETED" && !allAnswered)}
                   className="rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-60"
+                  title={!allAnswered ? "Answer all questions to complete the run." : undefined}
                 >
-                  {submitting ? "Submitting…" : "Submit Run"}
+                  {submitting ? "Submitting…" : "Complete Run"}
                 </button>
               )}
             </div>
@@ -626,7 +662,7 @@ export default function AssessmentRunEditor({
           ) : null}
 
           <div className="mt-3 text-[11px] text-slate-500">
-            Completed sections auto-collapse when all questions are answered.
+            Runs only complete when you click <span className="text-slate-200 font-semibold">Complete Run</span>.
           </div>
         </section>
 
@@ -695,7 +731,11 @@ export default function AssessmentRunEditor({
                                 <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-200">
                                   Answered
                                 </span>
-                              ) : null}
+                              ) : (
+                                <span className="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-0.5 font-semibold text-slate-300">
+                                  Unanswered
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -768,9 +808,9 @@ export default function AssessmentRunEditor({
             </div>
           </div>
 
-          {!showResultsPanel ? (
+          {status !== "COMPLETED" ? (
             <div className="mt-3 text-[11px] text-slate-500">
-              Submit the run to finalize scoring + generate findings.
+              Complete the run to finalize scoring + generate findings.
             </div>
           ) : (
             <div className="mt-3 text-[11px] text-emerald-200/80">

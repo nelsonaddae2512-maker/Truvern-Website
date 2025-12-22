@@ -4,8 +4,7 @@ import prisma from "@/lib/prisma";
 
 export const metadata = {
   title: "Assessments – Truvern",
-  description:
-    "Portfolio of all vendor assessments, with live scores and status.",
+  description: "Portfolio of all vendor assessments, with live scores and status.",
 };
 
 function riskTone(score: number | null | undefined): string {
@@ -22,52 +21,31 @@ function statusBadge(status: string) {
   switch (status) {
     case "COMPLETED":
       return (
-        <span
-          className={
-            base +
-            "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
-          }
-        >
+        <span className={base + "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"}>
           Completed
         </span>
       );
     case "IN_PROGRESS":
       return (
-        <span
-          className={
-            base + "border-cyan-500/60 bg-cyan-500/10 text-cyan-200"
-          }
-        >
+        <span className={base + "border-cyan-500/60 bg-cyan-500/10 text-cyan-200"}>
           In progress
         </span>
       );
     case "DRAFT":
       return (
-        <span
-          className={
-            base + "border-slate-600 bg-slate-800/80 text-slate-200"
-          }
-        >
+        <span className={base + "border-slate-600 bg-slate-800/80 text-slate-200"}>
           Draft
         </span>
       );
     case "ARCHIVED":
       return (
-        <span
-          className={
-            base + "border-slate-700 bg-slate-900/80 text-slate-400"
-          }
-        >
+        <span className={base + "border-slate-700 bg-slate-900/80 text-slate-400"}>
           Archived
         </span>
       );
     default:
       return (
-        <span
-          className={
-            base + "border-slate-700 bg-slate-900/80 text-slate-400"
-          }
-        >
+        <span className={base + "border-slate-700 bg-slate-900/80 text-slate-400"}>
           {status}
         </span>
       );
@@ -107,7 +85,7 @@ export default async function AssessmentsPage() {
       <div className="h-px w-full bg-gradient-to-r from-emerald-400/80 via-cyan-400/70 to-violet-500/70 mb-6" />
 
       {/* Header */}
-      <section className="mb-5 rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-lg shadow-black/40">
+      <section className="glass-soft mb-5 rounded-3xl px-4 py-4 shadow-lg shadow-black/40">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/70 border border-emerald-500/30 px-3 py-1">
@@ -128,24 +106,21 @@ export default async function AssessmentsPage() {
           </div>
 
           <div className="flex flex-col items-end gap-2">
-            <Link
-              href="/vendors"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-slate-950 shadow-md shadow-emerald-500/40 hover:bg-emerald-400"
-            >
+            <Link href="/vendors" className="btn-primary text-[12px]">
               <span>Start from a vendor</span>
-              <span>↗</span>
+              <span aria-hidden>↗</span>
             </Link>
             <p className="text-[10px] text-slate-500 max-w-xs text-right">
-              Pick a vendor, hit <span className="text-emerald-300">Start
-              assessment</span>, and it will show up here as a draft or
-              in-progress assessment.
+              Pick a vendor, hit{" "}
+              <span className="text-emerald-300">Start assessment</span>, and it
+              will show up here as a draft or in-progress assessment.
             </p>
           </div>
         </div>
       </section>
 
       {/* Table */}
-      <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-lg shadow-black/40">
+      <section className="glass-soft rounded-3xl px-4 py-4 shadow-lg shadow-black/40">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
             All assessments ({rows.length})
@@ -208,9 +183,7 @@ export default async function AssessmentsPage() {
                     <td className="px-4 py-2 align-top text-slate-300">
                       {a.standard ?? "—"}
                     </td>
-                    <td className="px-4 py-2 align-top">
-                      {statusBadge(a.status)}
-                    </td>
+                    <td className="px-4 py-2 align-top">{statusBadge(a.status)}</td>
                     <td className="px-4 py-2 align-top text-right">
                       <span className={riskTone(a.score)}>
                         {a.score == null ? "—" : `${a.score}/100`}
@@ -233,12 +206,9 @@ export default async function AssessmentsPage() {
                         : "—"}
                     </td>
                     <td className="px-4 py-2 align-top text-right">
-                      <Link
-                        href={`/assessments/${a.id}/run`}
-                        className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-200 hover:border-emerald-400 hover:text-emerald-200"
-                      >
+                      <Link href={`/assessments/${a.id}/run`} className="btn-glass text-[11px] px-3 py-1 rounded-full">
                         <span>Open</span>
-                        <span>↗</span>
+                        <span aria-hidden>↗</span>
                       </Link>
                     </td>
                   </tr>

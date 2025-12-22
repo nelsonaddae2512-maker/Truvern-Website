@@ -1,4 +1,4 @@
-﻿// app/pricing/page.tsx
+// app/pricing/page.tsx
 import Link from "next/link";
 
 export const metadata = {
@@ -55,7 +55,7 @@ export default function PricingPage() {
         {/* Plans */}
         <section className="grid gap-6 md:grid-cols-3">
           {/* Starter */}
-          <article className="flex flex-col rounded-3xl border border-slate-800 bg-slate-900/60 p-6 text-sm shadow-sm shadow-slate-950/60">
+          <article className="glass-soft flex flex-col rounded-3xl p-6 text-sm shadow-sm shadow-slate-950/60">
             <div className="mb-4 flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-base font-semibold tracking-tight">
@@ -89,7 +89,7 @@ export default function PricingPage() {
             <div className="mt-auto">
               <Link
                 href="/sign-up"
-                className="inline-flex w-full items-center justify-center rounded-full border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-xs font-medium text-slate-50 transition hover:border-emerald-400/70 hover:bg-slate-900"
+                className="btn-primary w-full items-center justify-center text-xs"
               >
                 Start with free vendors
               </Link>
@@ -101,7 +101,7 @@ export default function PricingPage() {
           </article>
 
           {/* Pro */}
-          <article className="flex flex-col rounded-3xl border border-emerald-500/60 bg-slate-900/80 p-6 text-sm shadow-lg shadow-emerald-500/25">
+          <article className="glass-soft flex flex-col rounded-3xl border border-emerald-500/60 bg-slate-900/80 p-6 text-sm shadow-lg shadow-emerald-500/25">
             <div className="mb-4 flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-base font-semibold tracking-tight">Pro</h2>
@@ -136,7 +136,7 @@ export default function PricingPage() {
             <div className="mt-auto">
               <Link
                 href="/vendor-space/billing"
-                className="inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400"
+                className="btn-primary w-full items-center justify-center text-xs"
               >
                 Talk to us about Pro
               </Link>
@@ -148,7 +148,7 @@ export default function PricingPage() {
           </article>
 
           {/* Enterprise */}
-          <article className="flex flex-col rounded-3xl border border-slate-800 bg-slate-900/60 p-6 text-sm shadow-sm shadow-slate-950/60">
+          <article className="glass-soft flex flex-col rounded-3xl p-6 text-sm shadow-sm shadow-slate-950/60">
             <div className="mb-4 flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-base font-semibold tracking-tight">
@@ -182,7 +182,7 @@ export default function PricingPage() {
             <div className="mt-auto">
               <Link
                 href="/contact"
-                className="inline-flex w-full items-center justify-center rounded-full border border-slate-700 bg-slate-950/60 px-4 py-2.5 text-xs font-medium text-slate-50 transition hover:border-emerald-400/70 hover:bg-slate-900"
+                className="btn-glass w-full items-center justify-center text-xs"
               >
                 Contact sales
               </Link>
@@ -195,7 +195,7 @@ export default function PricingPage() {
         </section>
 
         {/* Billing + rollout info */}
-        <section className="mt-4 space-y-6 rounded-3xl border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-200">
+        <section className="glass-soft mt-4 space-y-6 rounded-3xl p-6 text-sm text-slate-200">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -207,14 +207,14 @@ export default function PricingPage() {
             </div>
             <Link
               href="/contact"
-              className="inline-flex items-center justify-center rounded-full border border-slate-700 bg-slate-950/60 px-4 py-2 text-xs font-medium text-slate-50 transition hover:border-emerald-400/70 hover:bg-slate-900"
+              className="btn-glass items-center justify-center text-xs"
             >
               Talk to us about rollout
             </Link>
           </div>
 
           <div className="grid gap-4 text-xs md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+            <div className="glass-soft rounded-2xl p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                 1. Start in Starter
               </p>
@@ -223,7 +223,7 @@ export default function PricingPage() {
                 the Truvern workflow with real assessments and evidence.
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+            <div className="glass-soft rounded-2xl p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                 2. Upgrade in-app
               </p>
@@ -233,7 +233,7 @@ export default function PricingPage() {
                 receipts.
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+            <div className="glass-soft rounded-2xl p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
                 3. Scale to Enterprise
               </p>
@@ -247,7 +247,7 @@ export default function PricingPage() {
         </section>
 
         {/* Final CTA */}
-        <section className="mt-4 rounded-3xl border border-slate-800 bg-slate-900/40 p-5 text-center text-xs text-slate-300">
+        <section className="glass-soft mt-4 rounded-3xl p-5 text-center text-xs text-slate-300">
           <p>
             Need a different deployment model or want to mirror data from an
             existing GRC / TPRM stack?{" "}

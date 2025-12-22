@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { auth, currentUser } from "@clerk/nextjs/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function devBypassEnabled() {
   return (
@@ -52,7 +54,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const existing = await prisma.evidenceRequest.findUnique({
       where: { id: requestId },
-      select: { id: true, vendorId: true, status: true },
+      select: {
+        id: true,
+        vendorId: true,
+        status: true,
+        vendor: { select: { deletedAt: true } },
+      },
     });
 
     if (!existing) {
@@ -62,12 +69,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
     }
 
+    // ✅ Archived vendor guardrail
+    if (existing.vendor?.deletedAt) {
+      return NextResponse.json(
+        { ok: false, error: "Vendor is archived. Restore to submit evidence." },
+        { status: 409 }
+      );
+    }
+
+    // ✅ Only OPEN/REJECTED can be submitted
+    if (!["OPEN", "REJECTED"].includes(String(existing.status))) {
+      return NextResponse.json(
+        { ok: false, error: "Request is not open for submission" },
+        { status: 409 }
+      );
+    }
+
     const updated = await prisma.evidenceRequest.update({
       where: { id: requestId },
       data: {
-        status: "SUBMITTED",
-        // We keep notes out of the DB for now (you can add submissionNotes in Phase 322 if desired)
+        status: "SUBMITTED" as any,
+        submittedAt: new Date(),
         updatedAt: new Date(),
+        // Notes still not persisted (future: submissionNotes)
       } as any,
     });
 

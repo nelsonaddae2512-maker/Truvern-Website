@@ -1,203 +1,156 @@
-'use client';
+// components/vendor-evidence-panel.tsx
+"use client";
 
-import { useState, useTransition, FormEvent } from 'react';
+import { useMemo, useState } from "react";
 
-type EvidenceItemLite = {
-  id: number;
-  title: string | null;
-  type: string | null;
-  createdAt: string | null;
-};
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
 
-type Props = {
-  vendorId: number;
-  initialEvidence: EvidenceItemLite[];
-};
+async function safeJson(res: Response) {
+  const txt = await res.text().catch(() => "");
+  if (!txt) return null;
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return { ok: false, error: txt };
+  }
+}
 
-export function VendorEvidencePanel({ vendorId, initialEvidence }: Props) {
-  const [evidence, setEvidence] = useState<EvidenceItemLite[]>(initialEvidence);
+export default function VendorEvidencePanel({ vendorId }: { vendorId: number }) {
   const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [kind, setKind] = useState('SOC 2');
+  const [filename, setFilename] = useState("");
+  const [type, setType] = useState("");
+
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  const canSubmit = useMemo(
+    () => !!file && Number.isFinite(vendorId) && vendorId > 0 && !busy,
+    [file, vendorId, busy]
+  );
+
+  async function onUpload() {
     setError(null);
-    setSuccess(null);
+    setOkMsg(null);
 
-    if (!file) {
-      setError('Choose a file to upload.');
-      return;
-    }
+    if (!file) return setError("Choose a file first.");
+    if (!Number.isFinite(vendorId) || vendorId <= 0) return setError("Invalid vendorId.");
 
-    startTransition(async () => {
-      try {
-        // 1) Ask backend for a presigned URL
-        const presignRes = await fetch('/api/evidence/presign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            vendorId,
-            fileName: file.name,
-            contentType: file.type || 'application/octet-stream',
-            title: title || file.name,
-            type: kind,
-          }),
-        });
+    setBusy(true);
+    try {
+      const formData = new FormData();
 
-        if (!presignRes.ok) {
-          let message = `Presign failed (${presignRes.status})`;
-          try {
-            const data = await presignRes.json();
-            if (data?.message || data?.error) {
-              message = String(data.message || data.error);
-            }
-          } catch {
-            // ignore JSON parse errors, keep default message
-          }
-          throw new Error(message);
-        }
+      const finalFilename = (filename ?? "").trim() || file.name;
+      const finalType =
+        (type ?? "").trim() || file.type || "application/octet-stream";
 
-        const presignData: {
-          uploadUrl: string;
-          evidenceId?: number;
-          fileUrl?: string;
-        } = await presignRes.json();
+      formData.append("file", file);
+      formData.append("vendorId", String(vendorId));
+      formData.append("filename", finalFilename);
+      formData.append("type", finalType);
+      formData.append("title", finalFilename);
 
-        // 2) Upload the file directly to storage
-        const uploadRes = await fetch(presignData.uploadUrl, {
-          method: 'PUT',
-          body: file,
-        });
+      const res = await fetch("/api/evidence/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-        if (!uploadRes.ok) {
-          throw new Error(`File upload failed (${uploadRes.status})`);
-        }
-
-        // 3) Optimistically add to local table
-        const nowIso = new Date().toISOString();
-        setEvidence((prev) => [
-          {
-            id: presignData.evidenceId ?? Date.now(),
-            title: title || file.name,
-            type: kind,
-            createdAt: nowIso,
-          },
-          ...prev,
-        ]);
-
-        setFile(null);
-        setTitle('');
-        setKind('SOC 2');
-        (e.target as HTMLFormElement).reset();
-        setSuccess('Evidence uploaded successfully.');
-      } catch (err: any) {
-        console.error(err);
-        setError(err?.message || 'Upload failed. Please try again.');
+      const data = await safeJson(res);
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || `Upload failed (${res.status})`);
       }
-    });
+
+      setOkMsg("Uploaded.");
+      setFile(null);
+      setFilename("");
+      setType("");
+    } catch (e: any) {
+      setError(e?.message || "Upload failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <section className="border rounded-lg px-4 py-4 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-medium">Evidence</h2>
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-sm font-semibold text-slate-50">Evidence</div>
+        <div className="text-xs text-slate-200/60">Vendor #{vendorId}</div>
       </div>
 
-      {/* Upload form */}
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
-      >
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-sm"
-          required
-        />
-
-        <div className="flex flex-col gap-1">
-          <input
-            type="text"
-            placeholder="Evidence title (optional)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="border rounded-md px-2 py-1 text-sm"
-          />
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value)}
-            className="border rounded-md px-2 py-1 text-sm"
-          >
-            <option>SOC 2</option>
-            <option>ISO 27001</option>
-            <option>Pentest report</option>
-            <option>DPIA</option>
-            <option>Policy document</option>
-            <option>Other</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isPending}
-          className="self-start border rounded-md px-3 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60"
-        >
-          {isPending ? 'Uploading…' : 'Upload evidence'}
-        </button>
-      </form>
-
-      {error && (
-        <p className="text-xs text-red-600" role="alert">
+      {error ? (
+        <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
           {error}
-        </p>
-      )}
-      {success && (
-        <p className="text-xs text-emerald-600" role="status">
-          {success}
-        </p>
-      )}
-
-      {/* Evidence table */}
-      {evidence.length === 0 ? (
-        <p className="text-sm text-muted-foreground mt-2">
-          No evidence has been linked to this vendor yet. You can add SOC
-          reports, ISO certificates, DPIAs, and other proof as your workflow
-          evolves.
-        </p>
-      ) : (
-        <div className="overflow-x-auto border rounded-md mt-3">
-          <table className="min-w-full text-sm">
-            <thead className="bg-muted/60">
-              <tr className="text-left">
-                <th className="px-4 py-2 font-medium">Title</th>
-                <th className="px-4 py-2 font-medium">Type</th>
-                <th className="px-4 py-2 font-medium">Uploaded</th>
-              </tr>
-            </thead>
-            <tbody>
-              {evidence.map((item) => (
-                <tr key={item.id} className="border-t">
-                  <td className="px-4 py-2">
-                    {item.title ?? `Evidence #${item.id}`}
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">
-                    {item.type ?? '—'}
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">
-                    {item.createdAt
-                      ? new Date(item.createdAt).toLocaleDateString()
-                      : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      )}
-    </section>
+      ) : null}
+
+      {okMsg ? (
+        <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+          {okMsg}
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Filename (optional)
+          </label>
+          <input
+            value={filename}
+            onChange={(e) => setFilename(e.target.value)}
+            placeholder={file ? file.name : "SOC2-TypeII.pdf"}
+            className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            File
+          </label>
+          <input
+            type="file"
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              setFile(f);
+              if (f && !(type ?? "").trim()) setType(f.type || "");
+              if (f && !(filename ?? "").trim()) setFilename(f.name || "");
+            }}
+            className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          />
+        </div>
+
+        <div className="md:col-span-3">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            MIME type (optional)
+          </label>
+          <input
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            placeholder="application/pdf"
+            className="mt-1 w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onUpload}
+          disabled={!canSubmit}
+          className={clsx(
+            "rounded-xl border px-3 py-2 text-sm font-semibold",
+            !canSubmit
+              ? "cursor-not-allowed border-white/10 bg-white/5 text-slate-200/60"
+              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/15"
+          )}
+        >
+          {busy ? "Uploading…" : "Upload"}
+        </button>
+
+        <div className="text-xs text-slate-200/60">{file ? file.name : "No file selected"}</div>
+      </div>
+    </div>
   );
 }

@@ -1,289 +1,397 @@
 // app/vendor-portal/assessments/page.tsx
 import Link from "next/link";
 import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function clsx(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(" ");
+function devBypassEnabled() {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.TRUVERN_DEV_BYPASS_AUTH === "1"
+  );
+}
+
+async function resolveVendorId(): Promise<number | null> {
+  if (devBypassEnabled()) {
+    const v = Number(process.env.TRUVERN_DEV_VENDOR_ID ?? "");
+    return Number.isFinite(v) ? v : null;
+  }
+
+  const { userId } = auth();
+  if (!userId) return null;
+
+  const user = await currentUser();
+  const vendorIdRaw = (user?.publicMetadata as any)?.vendorId;
+
+  const vendorId =
+    typeof vendorIdRaw === "number"
+      ? vendorIdRaw
+      : typeof vendorIdRaw === "string"
+      ? Number(vendorIdRaw)
+      : NaN;
+
+  return Number.isFinite(vendorId) ? vendorId : null;
 }
 
 function fmtDate(d?: Date | string | null) {
   if (!d) return "—";
   const dt = typeof d === "string" ? new Date(d) : d;
-  if (Number.isNaN(dt.getTime())) return "—";
-  return dt.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return dt.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function statusTone(status: string) {
-  const s = String(status || "").toUpperCase();
-  if (s.includes("IN_PROGRESS")) return "border-sky-500/30 bg-sky-500/10 text-sky-200";
-  if (s.includes("COMPLETE") || s.includes("DONE")) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
-  if (s.includes("CANCEL") || s.includes("ARCHIVE")) return "border-slate-500/30 bg-slate-500/10 text-slate-200";
-  return "border-white/10 bg-white/5 text-slate-200/80";
+function normalizeStatus(s: any): string {
+  const v = String(s ?? "").toUpperCase().trim();
+  return v || "—";
 }
 
-async function resolveVendorForUser(userId: string, email?: string | null) {
-  const anyPrisma: any = prisma;
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
 
-  // Prefer explicit mappings if your schema has them
-  if (typeof anyPrisma.vendorUser?.findFirst === "function") {
-    const vu = await anyPrisma.vendorUser
-      .findFirst({
-        where: { userId },
-        include: { vendor: { select: { id: true, name: true } } },
-      })
-      .catch(() => null);
-    if (vu?.vendor) return vu.vendor;
+export default async function VendorPortalAssessmentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const statusParamRaw = Array.isArray(sp.status) ? sp.status[0] : sp.status;
+  const statusFilter = statusParamRaw
+    ? String(statusParamRaw).toUpperCase()
+    : "ALL";
+
+  const vendorId = await resolveVendorId();
+
+  if (!vendorId) {
+    return (
+      <main className="container-page py-12">
+        <h1 className="text-2xl font-semibold">Vendor Portal</h1>
+        <p className="mt-2 text-slate-200/70">
+          You must be signed in as a vendor to view assessments.
+        </p>
+        <div className="mt-6 flex gap-3">
+          <Link className="btn btn-primary" href="/sign-in">
+            Sign in
+          </Link>
+          <Link className="btn btn-secondary" href="/">
+            Back home
+          </Link>
+        </div>
+      </main>
+    );
   }
 
-  // Common direct linking field patterns
-  const candidates = ["portalUserId", "userId", "clerkUserId"];
-  for (const field of candidates) {
-    try {
-      const v = await prisma.vendor.findFirst({
-        where: { [field]: userId } as any,
-        select: { id: true, name: true },
-      });
-      if (v) return v;
-    } catch {
-      // ignore
+  const vendor = await prisma.vendor.findUnique({
+    where: { id: vendorId },
+    select: { id: true, name: true },
+  });
+
+  if (!vendor) {
+    return (
+      <main className="container-page py-12">
+        <h1 className="text-2xl font-semibold">Vendor not found</h1>
+        <p className="mt-2 text-slate-200/70">
+          Your account is not linked to a vendor record.
+        </p>
+      </main>
+    );
+  }
+
+  const assessmentsRaw = await prisma.assessment.findMany({
+    where: { vendorId: vendor.id } as any,
+    orderBy: [{ updatedAt: "desc" as any }, { createdAt: "desc" as any }],
+    take: 100,
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      templateId: true,
+      organizationId: true,
+    } as any,
+  });
+
+  const assessments = assessmentsRaw.filter((a: any) => {
+    if (statusFilter === "ALL") return true;
+    return normalizeStatus(a.status) === statusFilter;
+  });
+
+  // -------- Progress data --------
+  const assessmentIds = assessmentsRaw.map((a: any) => a.id);
+
+  // Answered per assessment (AssessmentAnswer.value is String? in your schema)
+  const answeredGroups =
+    assessmentIds.length > 0
+      ? await prisma.assessmentAnswer.groupBy({
+          by: ["assessmentId"],
+          where: {
+            assessmentId: { in: assessmentIds },
+            value: { not: null, notIn: [""] },
+          } as any,
+          _count: { _all: true },
+        })
+      : [];
+
+  const answeredByAssessment = new Map<number, number>(
+    (answeredGroups as any[]).map((g: any) => [
+      g.assessmentId,
+      g._count?._all ?? 0,
+    ])
+  );
+
+  // Total questions per template (THIS matches your schema)
+  const templateIds = Array.from(
+    new Set(
+      assessmentsRaw
+        .map((a: any) => Number(a?.templateId))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    )
+  );
+
+  const totalQuestionsByTemplate = new Map<number, number>();
+
+  if (templateIds.length > 0) {
+    const qGroups = await prisma.assessmentQuestion.groupBy({
+      by: ["templateId"],
+      where: { templateId: { in: templateIds } } as any,
+      _count: { _all: true },
+    });
+
+    for (const g of qGroups as any[]) {
+      const tid = Number(g.templateId);
+      if (!Number.isFinite(tid)) continue;
+      totalQuestionsByTemplate.set(tid, g._count?._all ?? 0);
     }
-  }
 
-  // Fallback: match by vendor contact email if present
-  if (email) {
-    const emailFields = ["contactEmail", "email", "primaryEmail"];
-    for (const f of emailFields) {
-      try {
-        const v = await prisma.vendor.findFirst({
-          where: { [f]: email } as any,
-          select: { id: true, name: true },
+    // Optional fallback: if a template returned 0 (some datasets attach questions by sectionId only),
+    // count via sections -> questions.sectionId
+    const missing = templateIds.filter(
+      (tid) => (totalQuestionsByTemplate.get(tid) ?? 0) === 0
+    );
+
+    if (missing.length > 0) {
+      const sections = await prisma.assessmentSection.findMany({
+        where: { templateId: { in: missing } } as any,
+        select: { id: true, templateId: true },
+      });
+
+      const sectionIds = (sections as any[]).map((s: any) => s.id);
+
+      if (sectionIds.length > 0) {
+        const bySection = await prisma.assessmentQuestion.groupBy({
+          by: ["sectionId"],
+          where: { sectionId: { in: sectionIds } } as any,
+          _count: { _all: true },
         });
-        if (v) return v;
-      } catch {
-        // ignore
+
+        const sectionCount = new Map<number, number>(
+          (bySection as any[]).map((g: any) => [
+            Number(g.sectionId),
+            g._count?._all ?? 0,
+          ])
+        );
+
+        const rollup = new Map<number, number>();
+        for (const s of sections as any[]) {
+          const c = sectionCount.get(s.id) ?? 0;
+          rollup.set(s.templateId, (rollup.get(s.templateId) ?? 0) + c);
+        }
+
+        for (const tid of missing) {
+          const v = rollup.get(tid) ?? 0;
+          if (v > 0) totalQuestionsByTemplate.set(tid, v);
+        }
       }
     }
   }
 
-  // Dev-only safety net (keeps local demo working)
-  return prisma.vendor
-    .findFirst({ orderBy: { id: "asc" }, select: { id: true, name: true } })
-    .catch(() => null);
-}
+  // Template metadata (naming only)
+  const templates =
+    templateIds.length > 0
+      ? await prisma.assessmentTemplate.findMany({
+          where: { id: { in: templateIds } },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            standard: true,
+            code: true,
+            category: true,
+            version: true,
+            isActive: true,
+          } as any,
+        })
+      : [];
 
-async function getAnsweredCount(runId: number) {
-  const anyPrisma: any = prisma;
-  if (typeof anyPrisma.assessmentAnswer?.count !== "function") return null;
-  return anyPrisma.assessmentAnswer.count({ where: { assessmentId: runId } }).catch(() => null);
-}
-
-async function getTotalQuestions(runId: number, templateId: number | null) {
-  const anyPrisma: any = prisma;
-  if (typeof anyPrisma.assessmentQuestion?.count !== "function") return null;
-
-  // Prefer run-scoped questions if present in schema
-  const hasAssessmentId = (() => {
-    // cheap heuristic: try count and catch schema mismatch
-    return true;
-  })();
-
-  if (hasAssessmentId) {
-    const byRun = await anyPrisma.assessmentQuestion
-      .count({ where: { assessmentId: runId } })
-      .catch(() => null);
-    if (typeof byRun === "number" && byRun > 0) return byRun;
-  }
-
-  // Fallback to template-scoped questions
-  if (templateId) {
-    const byTemplate = await anyPrisma.assessmentQuestion
-      .count({ where: { templateId } })
-      .catch(() => null);
-    if (typeof byTemplate === "number") return byTemplate;
-  }
-
-  return null;
-}
-
-export default async function VendorPortalAssessmentsPage() {
-  const { userId } = auth();
-
-  if (!userId) {
-    return (
-      <main className="container-page py-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-          <h1 className="text-2xl font-semibold text-slate-50">Vendor assessments</h1>
-          <p className="mt-2 text-sm text-slate-200/70">Please sign in to view your assessments.</p>
-          <div className="mt-6">
-            <Link
-              href="/sign-in"
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
-            >
-              Sign in
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  const vendor = await resolveVendorForUser(userId, null);
-
-  if (!vendor) {
-    return (
-      <main className="container-page py-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-          <h1 className="text-2xl font-semibold text-slate-50">Vendor not found</h1>
-          <p className="mt-2 text-sm text-slate-200/70">
-            We couldn’t resolve a vendor account for your login.
-          </p>
-          <div className="mt-6">
-            <Link
-              href="/vendor-portal"
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
-            >
-              Back to Vendor Portal
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  const RunModel: any = (prisma as any).assessmentRun ?? (prisma as any).assessment;
-
-  if (!RunModel?.findMany) {
-    return (
-      <main className="container-page py-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8">
-          <h1 className="text-2xl font-semibold text-slate-50">Assessments not available</h1>
-          <p className="mt-2 text-sm text-slate-200/70">
-            No <code className="text-slate-50">assessment</code> or <code className="text-slate-50">assessmentRun</code> model found.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  const runs: any[] =
-    (await RunModel.findMany({
-      where: { vendorId: vendor.id },
-      orderBy: [{ updatedAt: "desc" as any }, { id: "desc" as any }],
-      take: 50,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        startedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        templateId: true,
-      },
-    }).catch(() => [])) ?? [];
-
-  // compute progress best-effort (answers + total questions)
-  const rows = await Promise.all(
-    runs.map(async (r) => {
-      const runId = Number(r?.id);
-      const answered = await getAnsweredCount(runId);
-      const total = await getTotalQuestions(runId, r?.templateId ?? null);
-      return { ...r, answered, total };
-    })
+  const templateById = new Map<number, any>(
+    (templates as any[]).map((t: any) => [t.id, t])
   );
+
+  // Status chips
+  const statusCounts = assessmentsRaw.reduce(
+    (acc: Record<string, number>, a: any) => {
+      const k = normalizeStatus(a.status);
+      acc[k] = (acc[k] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const allCount = assessmentsRaw.length;
+
+  const statusOptions = [
+    { key: "ALL", label: `All (${allCount})` },
+    ...Object.keys(statusCounts)
+      .sort()
+      .map((k) => ({
+        key: k,
+        label: `${k.replace(/_/g, " ")} (${statusCounts[k]})`,
+      })),
+  ];
 
   return (
     <main className="container-page py-10">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-xs font-semibold tracking-wider text-emerald-200/90">VENDOR PORTAL</div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-50">Assessments</h1>
-          <p className="mt-1 text-sm text-slate-200/70">
-            Vendor: <span className="font-semibold text-slate-50">{vendor.name}</span>
+          <h1 className="text-3xl font-semibold">Assessments</h1>
+          <p className="mt-1 text-slate-200/70">
+            For <span className="text-slate-100">{vendor.name}</span>
           </p>
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/vendor-portal"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-50 hover:bg-white/10"
-          >
-            Back to Vendor Portal
-          </Link>
-        </div>
+        <Link href="/vendor-portal" className="btn btn-secondary">
+          Back to Vendor Portal
+        </Link>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-slate-50">Your assessment runs</div>
-          <div className="text-xs text-slate-200/60">{rows.length} total</div>
+      {/* Filters */}
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {statusOptions.map((opt) => {
+          const active = opt.key === statusFilter;
+          const href =
+            opt.key === "ALL"
+              ? "/vendor-portal/assessments"
+              : `/vendor-portal/assessments?status=${encodeURIComponent(
+                  opt.key
+                )}`;
+          return (
+            <Link
+              key={opt.key}
+              href={href}
+              className={
+                active
+                  ? "rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200"
+                  : "rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200/80 hover:bg-white/10"
+              }
+            >
+              {opt.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+          <div className="text-sm font-semibold text-slate-50">
+            Recent assessments
+          </div>
+          <div className="text-xs text-slate-200/60">
+            {assessments.length} shown
+          </div>
         </div>
 
-        {rows.length === 0 ? (
-          <div className="mt-6 text-sm text-slate-200/70">
-            No assessments yet. (Run <code className="text-slate-50">npm run seed:demo-assessment</code> to generate one.)
+        {assessments.length === 0 ? (
+          <div className="px-5 py-6 text-sm text-slate-200/70">
+            No assessments match this filter.
           </div>
         ) : (
-          <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
-            <div className="grid grid-cols-12 gap-0 border-b border-white/10 bg-black/20 px-4 py-3 text-xs font-semibold text-slate-200/70">
-              <div className="col-span-6">Run</div>
-              <div className="col-span-3">Progress</div>
-              <div className="col-span-2">Status</div>
-              <div className="col-span-1 text-right">ID</div>
-            </div>
+          <div className="divide-y divide-white/5">
+            {assessments.map((a: any) => {
+              const rawTemplateId = Number(a?.templateId);
+              const hasTemplateId =
+                Number.isFinite(rawTemplateId) && rawTemplateId > 0;
 
-            <div className="divide-y divide-white/10">
-              {rows.map((r) => {
-                const runId = Number(r?.id);
-                const title = r?.title ?? `Assessment #${runId}`;
-                const updated = r?.updatedAt ?? r?.createdAt ?? null;
-                const status = String(r?.status ?? "UNKNOWN");
+              const t = hasTemplateId ? templateById.get(rawTemplateId) : null;
 
-                const answered = typeof r.answered === "number" ? r.answered : null;
-                const total = typeof r.total === "number" ? r.total : null;
+              const displayName = t?.name
+                ? t.name
+                : hasTemplateId
+                ? `Template #${rawTemplateId}`
+                : "Custom assessment";
 
-                const progressText =
-                  answered == null
-                    ? "—"
-                    : total == null
-                    ? `${answered} answered`
-                    : `${answered}/${total} answered`;
+              const sub =
+                t?.standard || t?.code || t?.category
+                  ? [t?.standard, t?.code, t?.category]
+                      .filter(Boolean)
+                      .join(" • ")
+                  : null;
 
-                return (
-                  <Link
-                    key={runId}
-                    href={`/vendor-portal/assessments/${runId}`}
-                    className="grid grid-cols-12 items-center gap-0 px-4 py-4 hover:bg-white/5"
-                  >
-                    <div className="col-span-6 min-w-0">
-                      <div className="truncate text-sm font-semibold text-slate-50">{title}</div>
-                      <div className="mt-1 text-xs text-slate-200/60">Updated: {fmtDate(updated)}</div>
-                    </div>
+              const answered = answeredByAssessment.get(a.id) ?? 0;
+              const total = hasTemplateId
+                ? totalQuestionsByTemplate.get(rawTemplateId) ?? 0
+                : 0;
 
-                    <div className="col-span-3 text-sm text-slate-200/80">{progressText}</div>
+              const pct =
+                total > 0
+                  ? clamp(Math.round((answered / total) * 100), 0, 100)
+                  : 0;
 
-                    <div className="col-span-2">
-                      <span
-                        className={clsx(
-                          "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                          statusTone(status)
-                        )}
-                      >
-                        {status}
+              return (
+                <div
+                  key={a.id}
+                  className="px-5 py-4 flex items-center justify-between gap-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="text-sm font-semibold text-slate-50 truncate">
+                        {displayName}
+                      </div>
+                      <span className="text-[11px] rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-slate-200/80">
+                        {normalizeStatus(a.status)}
                       </span>
                     </div>
 
-                    <div className="col-span-1 text-right text-sm font-semibold text-slate-200/80">
-                      #{runId}
+                    <div className="mt-1 text-xs text-slate-200/60">
+                      {sub ? <span>{sub} • </span> : null}
+                      Updated {fmtDate(a.updatedAt)} • Created{" "}
+                      {fmtDate(a.createdAt)}
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
+
+                    {/* Progress */}
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-[11px] text-slate-200/70">
+                        <span>
+                          {total > 0
+                            ? `${answered}/${total} answered`
+                            : "Progress: —"}
+                        </span>
+                        <span>{total > 0 ? `${pct}%` : ""}</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500/70"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/assessment/runs/${a.id}`}
+                      className="btn btn-primary"
+                    >
+                      Open
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

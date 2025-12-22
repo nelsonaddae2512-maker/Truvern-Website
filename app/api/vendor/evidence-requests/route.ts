@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { auth, currentUser } from "@clerk/nextjs/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function devBypassEnabled() {
   return (
@@ -39,6 +41,28 @@ export async function GET() {
     const vendorId = await resolveVendorId();
     if (!vendorId) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    // ✅ Archived vendor guardrail (Vendor Portal should not surface tasks for archived vendors)
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: vendorId },
+      select: { id: true, deletedAt: true },
+    });
+
+    if (!vendor) {
+      return NextResponse.json({ ok: false, error: "Vendor not found" }, { status: 404 });
+    }
+
+    if (vendor.deletedAt) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Vendor is archived. Restore to view and complete evidence requests.",
+          vendorId,
+          requests: [],
+        },
+        { status: 409 }
+      );
     }
 
     const requests = await prisma.evidenceRequest.findMany({

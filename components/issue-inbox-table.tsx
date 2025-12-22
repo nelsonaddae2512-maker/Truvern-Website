@@ -21,6 +21,15 @@ type IssueRow = {
 
 type Props = {
   issues: IssueRow[];
+  includeStatuses?: string[];
+  emptyLabel?: string;
+  showVendor?: boolean;
+
+  // Phase 326C: selection
+  selectable?: boolean;
+  selectedIds?: Set<number>;
+  onToggleOne?: (id: number) => void;
+  onToggleAll?: (ids: number[], checked: boolean) => void;
 };
 
 function formatDate(value: string | Date) {
@@ -60,22 +69,58 @@ function statusTone(status: string) {
   }
 }
 
-export default function IssueInboxTable({ issues }: Props) {
-  if (!issues || issues.length === 0) {
+export default function IssueInboxTable({
+  issues,
+  includeStatuses,
+  emptyLabel = "No issues found.",
+  showVendor = true,
+  selectable = false,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
+}: Props) {
+  const filtered =
+    includeStatuses && includeStatuses.length
+      ? (issues ?? []).filter((i) => includeStatuses.includes(String(i.status)))
+      : issues ?? [];
+
+  if (!filtered || filtered.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/60 px-4 py-6 text-sm text-slate-400">
-        No issues found.
+        {emptyLabel}
       </div>
     );
   }
+
+  const idsOnPage = filtered.map((i) => i.id);
+  const selectedCount =
+    selectable && selectedIds ? idsOnPage.filter((id) => selectedIds.has(id)).length : 0;
+
+  const allChecked = selectable && filtered.length > 0 && selectedCount === filtered.length;
+  const someChecked = selectable && selectedCount > 0 && selectedCount < filtered.length;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80">
       <table className="w-full text-sm">
         <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
           <tr>
+            {selectable ? (
+              <th className="w-[44px] px-3 py-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !!someChecked;
+                  }}
+                  onChange={(e) => onToggleAll?.(idsOnPage, e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-950"
+                  aria-label="Select all on page"
+                />
+              </th>
+            ) : null}
+
             <th className="px-4 py-3 text-left">Issue</th>
-            <th className="px-4 py-3 text-left">Vendor</th>
+            {showVendor ? <th className="px-4 py-3 text-left">Vendor</th> : null}
             <th className="px-4 py-3 text-left">Severity</th>
             <th className="px-4 py-3 text-left">Status</th>
             <th className="px-4 py-3 text-left">Created</th>
@@ -83,60 +128,69 @@ export default function IssueInboxTable({ issues }: Props) {
         </thead>
 
         <tbody>
-          {issues.map((issue) => (
-            <tr
-              key={issue.id}
-              className="group border-t border-slate-800 hover:bg-slate-900/70"
-            >
-              {/* Issue title → clickable */}
-              <td className="px-4 py-3">
-                <Link
-                  href={`/issues/${issue.id}`}
-                  className="font-medium text-slate-100 hover:text-emerald-300"
-                >
-                  {issue.title}
-                </Link>
-                {issue.assessment?.title && (
-                  <div className="text-[11px] text-slate-500">
-                    {issue.assessment.title}
-                  </div>
-                )}
-              </td>
+          {filtered.map((issue) => {
+            const checked = selectable && selectedIds ? selectedIds.has(issue.id) : false;
 
-              {/* Vendor */}
-              <td className="px-4 py-3">
-                {issue.vendor ? (
+            return (
+              <tr
+                key={issue.id}
+                className="group border-t border-slate-800 hover:bg-slate-900/70"
+              >
+                {selectable ? (
+                  <td className="px-3 py-3 align-top">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggleOne?.(issue.id)}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-950"
+                      aria-label={`Select issue ${issue.id}`}
+                    />
+                  </td>
+                ) : null}
+
+                <td className="px-4 py-3">
                   <Link
-                    href={`/vendors/${issue.vendor.id}`}
-                    className="text-slate-300 hover:text-emerald-300"
+                    href={`/issues/${issue.id}`}
+                    className="font-medium text-slate-100 hover:text-emerald-300"
                   >
-                    {issue.vendor.name}
+                    {issue.title}
                   </Link>
-                ) : (
-                  <span className="text-slate-500">—</span>
-                )}
-              </td>
+                  {issue.assessment?.title ? (
+                    <div className="text-[11px] text-slate-500">{issue.assessment.title}</div>
+                  ) : null}
+                </td>
 
-              {/* Severity */}
-              <td className="px-4 py-3">
-                <span className={`font-semibold ${severityTone(issue.severity)}`}>
-                  {issue.severity}
-                </span>
-              </td>
+                {showVendor ? (
+                  <td className="px-4 py-3">
+                    {issue.vendor ? (
+                      <Link
+                        href={`/vendors/${issue.vendor.id}`}
+                        className="text-slate-300 hover:text-emerald-300"
+                      >
+                        {issue.vendor.name}
+                      </Link>
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
+                  </td>
+                ) : null}
 
-              {/* Status */}
-              <td className="px-4 py-3">
-                <span className={`font-semibold ${statusTone(issue.status)}`}>
-                  {issue.status}
-                </span>
-              </td>
+                <td className="px-4 py-3">
+                  <span className={`font-semibold ${severityTone(String(issue.severity))}`}>
+                    {String(issue.severity)}
+                  </span>
+                </td>
 
-              {/* Created */}
-              <td className="px-4 py-3 text-slate-400">
-                {formatDate(issue.createdAt)}
-              </td>
-            </tr>
-          ))}
+                <td className="px-4 py-3">
+                  <span className={`font-semibold ${statusTone(String(issue.status))}`}>
+                    {String(issue.status)}
+                  </span>
+                </td>
+
+                <td className="px-4 py-3 text-slate-400">{formatDate(issue.createdAt)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

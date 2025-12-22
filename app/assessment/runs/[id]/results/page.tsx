@@ -8,21 +8,14 @@ type Props = { params: ParamsPromise };
 function cleanTemplateName(name: string | null | undefined) {
   if (!name) return null;
 
-  // Remove common dev prefixes like:
-  // "Phase200 Baseline CAIQ-style" -> "CAIQ-style"
-  // "PHASE 200 — Baseline: CAIQ" -> "Baseline: CAIQ" (then further cleaned)
-  // "Phase 200 - Something" -> "Something"
   let s = String(name).trim();
 
-  // Remove leading "Phase###", "Phase ###", "PHASE ###", optionally followed by punctuation/words like baseline.
   s = s.replace(/^phase\s*\d+\s*[-—:]\s*/i, "");
   s = s.replace(/^phase\s*\d+\s*/i, "");
 
-  // Remove leading "baseline" label if it immediately follows a phase tag
   s = s.replace(/^baseline\s*[-—:]\s*/i, "");
   s = s.replace(/^baseline\s+/i, "");
 
-  // Clean redundant whitespace
   s = s.replace(/\s{2,}/g, " ").trim();
 
   return s || null;
@@ -35,13 +28,32 @@ function displayAssessmentTitle(args: {
 }) {
   const { vendorName, templateName, assessmentTitle } = args;
 
-  // Prefer explicit assessment.title if present (usually production),
-  // otherwise fall back to cleaned template name.
   const cleanedTemplate = cleanTemplateName(templateName);
 
-  if (assessmentTitle && assessmentTitle.trim()) return `${vendorName} — ${assessmentTitle.trim()}`;
+  if (assessmentTitle && assessmentTitle.trim())
+    return `${vendorName} — ${assessmentTitle.trim()}`;
   if (cleanedTemplate) return `${vendorName} — ${cleanedTemplate}`;
   return `${vendorName} — Assessment Results`;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function scoreTone(score: number | null | undefined) {
+  if (score == null) return "border-slate-800 bg-slate-950/60 text-slate-200";
+  if (score >= 85) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+  if (score >= 70) return "border-sky-500/30 bg-sky-500/10 text-sky-200";
+  if (score >= 50) return "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  return "border-rose-500/30 bg-rose-500/10 text-rose-200";
+}
+
+function scoreLabel(score: number | null | undefined) {
+  if (score == null) return "Unscored";
+  if (score >= 85) return "Strong";
+  if (score >= 70) return "Healthy";
+  if (score >= 50) return "Watch";
+  return "High Risk";
 }
 
 export default async function AssessmentResultsPage({ params }: Props) {
@@ -70,9 +82,12 @@ export default async function AssessmentResultsPage({ params }: Props) {
       confidentialityScore: true,
       integrityScore: true,
       availabilityScore: true,
+      vendorId: true,
       vendor: { select: { id: true, name: true } },
       template: { select: { id: true, name: true, standard: true } },
-      answers: { select: { id: true } },
+
+      // Use counts rather than pulling arrays
+      _count: { select: { answers: true } },
     },
   });
 
@@ -94,7 +109,18 @@ export default async function AssessmentResultsPage({ params }: Props) {
     assessmentTitle: assessment.title ?? null,
   });
 
-  const answeredCount = assessment.answers?.length ?? 0;
+  const answeredCount = assessment._count?.answers ?? 0;
+
+  const totalCount = assessment.template?.id
+    ? await prisma.assessmentQuestion.count({
+        where: { templateId: assessment.template.id },
+      })
+    : 0;
+
+  const pct = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
+  const progressPct = clamp(pct, 0, 100);
+
+  const vendorId = assessment.vendor?.id ?? assessment.vendorId;
 
   return (
     <main className="container-page py-10">
@@ -105,32 +131,81 @@ export default async function AssessmentResultsPage({ params }: Props) {
         </div>
 
         <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-50">
               {title}
             </h1>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-slate-800 bg-slate-950/60 px-3 py-1 text-slate-200">
                 Status: <span className="font-semibold">{assessment.status}</span>
               </span>
+
               <span className="rounded-full border border-slate-800 bg-slate-950/60 px-3 py-1 text-slate-200">
-                Answered: <span className="font-semibold">{answeredCount}</span>
+                Answered:{" "}
+                <span className="font-semibold">
+                  {answeredCount}/{totalCount || "—"}
+                </span>
               </span>
+
+              <span className={`rounded-full border px-3 py-1 font-semibold ${scoreTone(assessment.score)}`}>
+                {scoreLabel(assessment.score)}
+                {assessment.score != null ? ` • ${assessment.score}` : ""}
+              </span>
+
               {assessment.template?.standard ? (
                 <span className="rounded-full border border-slate-800 bg-slate-950/60 px-3 py-1 text-slate-200">
                   {assessment.template.standard}
                 </span>
               ) : null}
             </div>
+
+            <div className="mt-4 max-w-xl">
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>Completion</span>
+                <span className="font-semibold text-slate-200">{progressPct}%</span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
+                <div className="h-full bg-emerald-500/70" style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className="mt-2 text-[11px] text-slate-500">
+                This score is refreshed at completion (Phase 323 baseline).
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/assessment/runs/${assessment.id}`}
               className="rounded-full border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-900"
             >
               Back to Run
             </Link>
+
+            {vendorId ? (
+              <>
+                <Link
+                  href={`/vendors/${vendorId}`}
+                  className="rounded-full border border-slate-800 bg-slate-950/60 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-900"
+                >
+                  Vendor Workspace ↗
+                </Link>
+
+                <Link
+                  href={`/vendors/${vendorId}/findings`}
+                  className="rounded-full border border-amber-400/50 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-500/15"
+                >
+                  Findings ↗
+                </Link>
+
+                <Link
+                  href="/board-report"
+                  className="rounded-full border border-emerald-400/60 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 hover:bg-emerald-500/15"
+                >
+                  Board Report ↗
+                </Link>
+              </>
+            ) : null}
 
             <form action={`/api/assessment-runs/${assessment.id}/reopen`} method="post">
               <button
@@ -145,13 +220,11 @@ export default async function AssessmentResultsPage({ params }: Props) {
       </div>
 
       {/* Score cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
           <div className="text-xs uppercase tracking-wider text-slate-400">Overall</div>
-          <div className="mt-3 text-3xl font-semibold text-slate-50">
-            {assessment.score ?? "—"}
-          </div>
-          <div className="mt-2 text-xs text-slate-500">Based on scoring engine + answered controls.</div>
+          <div className="mt-3 text-3xl font-semibold text-slate-50">{assessment.score ?? "—"}</div>
+          <div className="mt-2 text-xs text-slate-500">Baseline score at completion.</div>
         </div>
 
         <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
@@ -159,6 +232,7 @@ export default async function AssessmentResultsPage({ params }: Props) {
           <div className="mt-3 text-3xl font-semibold text-slate-50">
             {assessment.confidentialityScore ?? "—"}
           </div>
+          <div className="mt-2 text-xs text-slate-500">CIA rollup (baseline mirrors overall).</div>
         </div>
 
         <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
@@ -166,13 +240,15 @@ export default async function AssessmentResultsPage({ params }: Props) {
           <div className="mt-3 text-3xl font-semibold text-slate-50">
             {assessment.integrityScore ?? "—"}
           </div>
+          <div className="mt-2 text-xs text-slate-500">CIA rollup (baseline mirrors overall).</div>
         </div>
 
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5 md:col-span-3">
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
           <div className="text-xs uppercase tracking-wider text-slate-400">Availability</div>
           <div className="mt-3 text-3xl font-semibold text-slate-50">
             {assessment.availabilityScore ?? "—"}
           </div>
+          <div className="mt-2 text-xs text-slate-500">CIA rollup (baseline mirrors overall).</div>
         </div>
       </section>
 
@@ -180,12 +256,17 @@ export default async function AssessmentResultsPage({ params }: Props) {
         <div className="text-xs uppercase tracking-wider text-slate-400">Next steps</div>
         <ul className="mt-3 list-disc pl-5 text-sm text-slate-200 space-y-1">
           <li>
-            Review auto-generated findings in{" "}
-            <Link className="text-emerald-300 underline" href={`/vendors/${assessment.vendor?.id}#findings`}>
-              Vendor Findings
-            </Link>
+            Review findings in{" "}
+            {vendorId ? (
+              <Link className="text-emerald-300 underline" href={`/vendors/${vendorId}/findings`}>
+                Vendor Findings
+              </Link>
+            ) : (
+              <span className="text-slate-300">Vendor Findings</span>
+            )}
             .
           </li>
+          <li>Use Board Report for a board-ready snapshot.</li>
           <li>Reopen the run if you need to edit answers and re-submit.</li>
         </ul>
       </section>

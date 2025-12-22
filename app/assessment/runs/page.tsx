@@ -41,15 +41,11 @@ export default function AssessmentRunsPage() {
 
   // Create-run form
   const [createVendorId, setCreateVendorId] = useState<number | "">("");
-  const [createTemplateId, setCreateTemplateId] = useState<
-    number | ""
-  >("");
+  const [createTemplateId, setCreateTemplateId] = useState<number | "">("");
   const [createTitle, setCreateTitle] = useState("");
 
   // Filters
-  const [filterStatus, setFilterStatus] = useState<RunStatus | "ALL">(
-    "ALL"
-  );
+  const [filterStatus, setFilterStatus] = useState<RunStatus | "ALL">("ALL");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,18 +60,13 @@ export default function AssessmentRunsPage() {
         ]);
 
         if (!runsRes.ok) {
-          throw new Error(
-            `Failed to load runs (${runsRes.status})`
-          );
+          throw new Error(`Failed to load runs (${runsRes.status})`);
         }
         if (!optionsRes.ok) {
-          throw new Error(
-            `Failed to load options (${optionsRes.status})`
-          );
+          throw new Error(`Failed to load options (${optionsRes.status})`);
         }
 
-        const runsData =
-          (await runsRes.json()) as AssessmentRunListItem[];
+        const runsData = (await runsRes.json()) as AssessmentRunListItem[];
         const optionsData = (await optionsRes.json()) as {
           vendors: VendorOption[];
           templates: TemplateOption[];
@@ -89,9 +80,7 @@ export default function AssessmentRunsPage() {
         }
       } catch (err: any) {
         if (!cancelled) {
-          setError(
-            err?.message ?? "Failed to load assessment runs"
-          );
+          setError(err?.message ?? "Failed to load assessment runs");
           setState("error");
         }
       }
@@ -135,13 +124,10 @@ export default function AssessmentRunsPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(
-          body?.error ?? "Failed to create assessment run"
-        );
+        throw new Error(body?.error ?? "Failed to create assessment run");
       }
 
-      const created =
-        (await res.json()) as AssessmentRunListItem;
+      const created = (await res.json()) as AssessmentRunListItem;
 
       setRuns((prev) => [created, ...prev]);
       setCreateVendorId("");
@@ -155,9 +141,7 @@ export default function AssessmentRunsPage() {
   }
 
   async function handleDeleteRun(id: number) {
-    const ok = window.confirm(
-      "Delete this run? This cannot be undone."
-    );
+    const ok = window.confirm("Delete this run? This cannot be undone.");
     if (!ok) return;
 
     setState("submitting");
@@ -170,9 +154,7 @@ export default function AssessmentRunsPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(
-          body?.error ?? "Failed to delete assessment run"
-        );
+        throw new Error(body?.error ?? "Failed to delete assessment run");
       }
 
       setRuns((prev) => prev.filter((r) => r.id !== id));
@@ -205,9 +187,8 @@ export default function AssessmentRunsPage() {
             Assessment runs
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            Live assessments generated from your templates and
-            vendors. Drafts can be edited before you mark them
-            completed.
+            Live assessments generated from your templates and vendors. Drafts
+            can be edited before you mark them completed.
           </p>
         </div>
 
@@ -215,21 +196,16 @@ export default function AssessmentRunsPage() {
           <div className="text-xs text-slate-500">
             {state === "loading"
               ? "Loading runs..."
-              : `${runs.length} run${
-                  runs.length === 1 ? "" : "s"
-                }`}
+              : `${runs.length} run${runs.length === 1 ? "" : "s"}`}
           </div>
+
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400">
-              Filter status:
-            </span>
+            <span className="text-slate-400">Filter status:</span>
             <select
-              className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100"
+              className="input-glass text-xs px-2 py-1 rounded-md"
               value={filterStatus}
               onChange={(e) =>
-                setFilterStatus(
-                  e.target.value as RunStatus | "ALL"
-                )
+                setFilterStatus(e.target.value as RunStatus | "ALL")
               }
             >
               {STATUS_OPTIONS.map((s) => (
@@ -250,24 +226,17 @@ export default function AssessmentRunsPage() {
       )}
 
       {/* New run form */}
-      <form
-        onSubmit={handleCreateRun}
-        className="rounded-2xl border border-emerald-500/20 bg-slate-950/80 px-4 py-4 space-y-3"
-      >
+      <form onSubmit={handleCreateRun} className="glass-soft rounded-2xl px-4 py-4 space-y-3">
         <div className="flex flex-col md:flex-row md:items-end md:gap-3">
           <div className="flex-1">
-            <label className="text-xs font-medium text-slate-300">
-              Vendor
-            </label>
+            <label className="text-xs font-medium text-slate-300">Vendor</label>
             <select
               value={createVendorId === "" ? "" : String(createVendorId)}
               onChange={(e) => {
                 const val = e.target.value;
-                setCreateVendorId(
-                  val ? Number.parseInt(val, 10) : ""
-                );
+                setCreateVendorId(val ? Number.parseInt(val, 10) : "");
               }}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/60"
+              className="input-glass mt-1 text-sm"
             >
               <option value="">Select vendor…</option>
               {vendors.map((v) => (
@@ -283,18 +252,12 @@ export default function AssessmentRunsPage() {
               Template
             </label>
             <select
-              value={
-                createTemplateId === ""
-                  ? ""
-                  : String(createTemplateId)
-              }
+              value={createTemplateId === "" ? "" : String(createTemplateId)}
               onChange={(e) => {
                 const val = e.target.value;
-                setCreateTemplateId(
-                  val ? Number.parseInt(val, 10) : ""
-                );
+                setCreateTemplateId(val ? Number.parseInt(val, 10) : "");
               }}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/60"
+              className="input-glass mt-1 text-sm"
             >
               <option value="">Select template…</option>
               {templates.map((t) => (
@@ -314,33 +277,28 @@ export default function AssessmentRunsPage() {
               value={createTitle}
               onChange={(e) => setCreateTitle(e.target.value)}
               placeholder="If left blank, a smart default will be used."
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/60"
+              className="input-glass mt-1 text-sm"
             />
           </div>
 
           <div className="mt-3 md:mt-0 flex items-end">
             <button
               type="submit"
-              disabled={
-                !createVendorId ||
-                !createTemplateId ||
-                state === "submitting"
-              }
-              className="w-full md:w-auto rounded-md bg-emerald-500/80 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              disabled={!createVendorId || !createTemplateId || state === "submitting"}
+              className="btn-primary w-full md:w-auto"
             >
-              {state === "submitting"
-                ? "Creating…"
-                : "Create run"}
+              {state === "submitting" ? "Creating…" : "Create run"}
             </button>
           </div>
         </div>
       </form>
 
       {/* Runs table */}
-      <div className="rounded-2xl border border-white/5 bg-slate-950/80 overflow-hidden">
+      <div className="glass-soft rounded-2xl overflow-hidden">
         <div className="border-b border-white/5 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
           Runs &amp; scores
         </div>
+
         <div className="max-h-[480px] overflow-auto text-sm">
           {filteredRuns.length === 0 && (
             <div className="px-4 py-6 text-sm text-slate-400">
@@ -363,26 +321,23 @@ export default function AssessmentRunsPage() {
                   >
                     {run.title || "Untitled assessment"}
                   </Link>
+
                   <span className="text-[11px] rounded-full border border-slate-700 px-2 py-0.5 text-slate-300">
                     {run.vendorName}
                   </span>
+
                   {run.templateName && (
                     <span className="text-[11px] rounded-full border border-slate-700 px-2 py-0.5 text-slate-400">
                       {run.templateName}
                     </span>
                   )}
                 </div>
+
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                  <span>
-                    Updated: {formatDate(run.updatedAt) || "–"}
-                  </span>
-                  {run.dueAt && (
-                    <span>Due: {formatDate(run.dueAt)}</span>
-                  )}
+                  <span>Updated: {formatDate(run.updatedAt) || "–"}</span>
+                  {run.dueAt && <span>Due: {formatDate(run.dueAt)}</span>}
                   {run.completedAt && (
-                    <span>
-                      Completed: {formatDate(run.completedAt)}
-                    </span>
+                    <span>Completed: {formatDate(run.completedAt)}</span>
                   )}
                 </div>
               </div>
@@ -401,17 +356,19 @@ export default function AssessmentRunsPage() {
                 >
                   {run.status}
                 </span>
+
                 <button
                   type="button"
                   onClick={() => handleDeleteRun(run.id)}
                   disabled={state === "submitting"}
-                  className="text-[11px] rounded-md border border-rose-500/60 px-2 py-1 text-rose-200 hover:bg-rose-500/10 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                  className="btn-glass text-[11px] px-2 py-1 border-rose-500/60 text-rose-200 hover:bg-rose-500/10 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Delete
                 </button>
+
                 <Link
                   href={`/assessment/runs/${run.id}`}
-                  className="text-[11px] rounded-md border border-emerald-500/60 px-2 py-1 text-emerald-300 hover:bg-emerald-500/10 transition"
+                  className="btn-glass text-[11px] px-2 py-1 border-emerald-500/60 text-emerald-300 hover:bg-emerald-500/10"
                 >
                   Open
                 </Link>

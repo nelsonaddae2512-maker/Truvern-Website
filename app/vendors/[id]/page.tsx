@@ -1,375 +1,320 @@
-// app/vendors/[id]/page.tsx
 import Link from "next/link";
 import prisma from "@/lib/prisma";
-import VendorEvidenceTimeline from "@/components/vendor-evidence-timeline";
-import BoardPacketCTA from "@/components/board-packet-cta";
+import { requireDbOrganization } from "@/lib/org-db";
+import VendorRiskPanel from "@/components/vendors/vendor-risk-panel";
+import VendorActionability328A from "@/components/vendors/vendor-actionability-328a";
 
-type ParamsPromise = Promise<{ id: string }>;
-type SearchParamsPromise = Promise<{ as?: string }>;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type Props = {
-  params: ParamsPromise;
-  searchParams?: SearchParamsPromise;
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function parseVendorId(raw: unknown): number {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  const s = typeof v === "string" ? v.trim() : v == null ? "" : String(v);
+  const m = s.match(/\d+/);
+  return m ? Number(m[0]) : NaN;
+}
+
+function isOpenIssueStatus(status: string) {
+  const s = (status || "").toUpperCase();
+  return !["RESOLVED", "CLOSED", "DONE"].includes(s);
+}
+
+function severityPoints(sev: string) {
+  switch ((sev || "").toUpperCase()) {
+    case "CRITICAL":
+      return 10;
+    case "HIGH":
+      return 7;
+    case "MEDIUM":
+      return 4;
+    case "LOW":
+      return 1;
+    default:
+      return 2;
+  }
+}
+
+function sevKey(sev: string) {
+  const s = (sev || "").toUpperCase();
+  if (s === "CRITICAL") return "critical";
+  if (s === "HIGH") return "high";
+  if (s === "MEDIUM") return "medium";
+  if (s === "LOW") return "low";
+  return "medium";
+}
+
+function sevRank(sev: string) {
+  const s = (sev || "").toUpperCase();
+  if (s === "CRITICAL") return 4;
+  if (s === "HIGH") return 3;
+  if (s === "MEDIUM") return 2;
+  if (s === "LOW") return 1;
+  return 2;
+}
+
+type IssueLite = {
+  id: number;
+  title?: string | null;
+  status: string;
+  severity: string;
+  createdAt?: string | Date | null;
 };
 
-function riskTone(score: number | null | undefined): string {
-  if (score == null) return "bg-slate-800 text-slate-200 border-slate-700";
-  if (score >= 85)
-    return "bg-emerald-500/10 text-emerald-300 border-emerald-500/60";
-  if (score >= 70) return "bg-cyan-500/10 text-cyan-300 border-cyan-500/60";
-  if (score >= 50)
-    return "bg-amber-500/10 text-amber-300 border-amber-500/60";
-  return "bg-rose-500/10 text-rose-300 border-rose-500/60";
+async function safeFindVendor(orgId: number, vendorId: number) {
+  // Try rich select first (counts + optional metadata)
+  try {
+    const v = await prisma.vendor.findFirst({
+      where: { id: vendorId, organizationId: orgId } as any,
+      select: {
+        id: true,
+        name: true,
+        updatedAt: true,
+        tier: true as any,
+        criticality: true as any,
+        category: true as any,
+        _count: {
+          select: {
+            assessments: true,
+            issues: true,
+            evidence: true,
+            evidenceRequests: true,
+          },
+        },
+      } as any,
+    });
+    return v as any;
+  } catch {
+    // Fallback: minimal fields only
+    const v = await prisma.vendor.findFirst({
+      where: { id: vendorId, organizationId: orgId } as any,
+      select: { id: true, name: true, updatedAt: true } as any,
+    });
+    return v as any;
+  }
 }
 
-function riskLabel(score: number | null | undefined): string {
-  if (score == null) return "Not scored";
-  if (score >= 85) return `Low risk (${score})`;
-  if (score >= 70) return `Moderate (${score})`;
-  if (score >= 50) return `Elevated (${score})`;
-  return `High risk (${score})`;
+async function safeFindIssues(vendorId: number): Promise<IssueLite[]> {
+  try {
+    const rows = await prisma.issue.findMany({
+      where: { vendorId } as any,
+      select: { id: true, title: true, status: true, severity: true, createdAt: true } as any,
+      take: 5000,
+    });
+    return rows as any;
+  } catch {
+    try {
+      const rows = await prisma.issue.findMany({
+        where: { vendorId } as any,
+        select: { id: true, status: true, severity: true } as any,
+        take: 5000,
+      });
+      return rows as any;
+    } catch {
+      return [];
+    }
+  }
 }
 
-function chip(text: string | null | undefined) {
-  if (!text) return null;
-  return (
-    <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-2 py-0.5 text-[10px] text-slate-300">
-      {text}
-    </span>
-  );
-}
+export default async function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const org = await requireDbOrganization();
 
-function issueTone(count: number) {
-  if (count >= 10) return "bg-rose-500/10 text-rose-200 border-rose-500/30";
-  if (count >= 4) return "bg-amber-500/10 text-amber-200 border-amber-500/30";
-  if (count >= 1) return "bg-sky-500/10 text-sky-200 border-sky-500/30";
-  return "bg-slate-900/70 text-slate-300 border-slate-700";
-}
-
-export default async function VendorDetailPage({ params, searchParams }: Props) {
-  const { id } = await params;
-  const sp = searchParams ? await searchParams : {};
-  const asVendor = sp?.as === "vendor";
-
-  const vendorId = Number(id);
-
-  if (!vendorId || Number.isNaN(vendorId)) {
+  if ((org as any)?._needsOrgSelection) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-12">
-        <p className="text-sm text-rose-300">
-          Invalid vendor id in URL. Please return to your vendor list.
-        </p>
+      <main className="container-page py-10">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+          <h1 className="text-2xl font-semibold text-white">Select an organization</h1>
+          <p className="mt-2 text-white/70">
+            You&apos;re signed in, but no organization is selected yet. Choose an organization to continue.
+          </p>
+          <div className="mt-4 flex gap-3 text-sm">
+            <Link className="rounded-lg bg-white/10 px-3 py-2 text-white hover:bg-white/15" href="/select-org">
+              Select organization
+            </Link>
+            <Link className="rounded-lg bg-white/10 px-3 py-2 text-white hover:bg-white/15" href="/vendors">
+              Back to vendors
+            </Link>
+          </div>
+        </div>
       </main>
     );
   }
 
-  const vendor = await prisma.vendor.findUnique({
-    where: { id: vendorId },
-    include: {
-      organization: true,
-      trustProfile: true,
-      evidence: true,
-      issues: true,
-      assessments: {
-        orderBy: { createdAt: "desc" },
-        include: { template: true },
-      },
-    },
-  });
+  const dbOrgId = (org as any).id as number;
+  const { id } = await params;
+  const vendorId = parseVendorId(id);
+
+  if (!Number.isFinite(vendorId)) {
+    return (
+      <main className="container-page py-10">
+        <h1 className="text-2xl font-semibold text-white">Invalid vendor id</h1>
+        <div className="mt-4">
+          <Link className="text-sky-300 hover:underline" href="/vendors">
+            Back to vendors
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const vendor = await safeFindVendor(dbOrgId, vendorId);
 
   if (!vendor) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-12">
-        <p className="text-sm text-rose-300">
-          Vendor not found. Please return to your vendor list.
-        </p>
+      <main className="container-page py-10">
+        <h1 className="text-2xl font-semibold text-white">Vendor not found</h1>
+        <p className="mt-2 text-white/60">This vendor either doesn&apos;t exist or isn&apos;t in your organization.</p>
+        <div className="mt-4">
+          <Link className="text-sky-300 hover:underline" href="/vendors">
+            Back to vendors
+          </Link>
+        </div>
       </main>
     );
   }
 
-  const assessmentCount = vendor.assessments.length;
-  const evidenceCount = vendor.evidence.length;
+  const issues = await safeFindIssues(vendorId);
 
-  // ✅ FIX: treat ACCEPTED_RISK as NOT open
-  // Only "OPEN" + "IN_REVIEW" count as open issues on the workspace.
-  const OPEN_STATUSES = new Set(["OPEN", "IN_REVIEW"]);
+  const breakdown = { critical: 0, high: 0, medium: 0, low: 0 };
+  let totalPts = 0;
+  let recentPts = 0;
 
-  const openIssues = vendor.issues.filter((i) =>
-    OPEN_STATUSES.has(String(i.status))
-  ).length;
+  const RECENT_DAYS = 14;
+  const recentCutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
 
-  const criticalOpen = vendor.issues.filter(
-    (i) =>
-      OPEN_STATUSES.has(String(i.status)) &&
-      String(i.severity) === "CRITICAL"
-  ).length;
+  const openIssues = issues.filter((it) => isOpenIssueStatus(it.status));
 
-  // Optional: show accepted risks separately (useful for audit visibility)
-  const acceptedRiskCount = vendor.issues.filter(
-    (i) => String(i.status) === "ACCEPTED_RISK"
-  ).length;
+  for (const it of openIssues) {
+    const pts = severityPoints(it.severity);
+    totalPts += pts;
 
-  // ✅ Trust-profile-safe summary (Vendor model does NOT have `summary` in your schema)
-  const summary = vendor.trustProfile?.summary ?? null;
+    const key = sevKey(it.severity);
+    (breakdown as any)[key] = ((breakdown as any)[key] || 0) + 1;
+
+    try {
+      const d = it.createdAt ? new Date(it.createdAt as any) : null;
+      if (d && d >= recentCutoff) recentPts += pts;
+    } catch {}
+  }
+
+  const score = Math.max(0, Math.min(100, totalPts * 5));
+  const olderPts = Math.max(0, totalPts - recentPts);
+  const trend: "up" | "down" | "flat" =
+    totalPts === 0 ? "flat" : recentPts > olderPts ? "up" : recentPts < olderPts ? "down" : "flat";
+
+  const topOpenIssues = openIssues
+    .slice()
+    .sort((a, b) => {
+      const rs = sevRank(b.severity) - sevRank(a.severity);
+      if (rs !== 0) return rs;
+      return (b.id || 0) - (a.id || 0);
+    })
+    .slice(0, 6)
+    .map((it) => ({
+      id: it.id,
+      title: (it as any).title ?? `Issue #${it.id}`,
+      severity: it.severity,
+      status: it.status,
+    }));
+
+  const counts = {
+    assessments: vendor?._count?.assessments ?? 0,
+    openIssues: openIssues.length,
+    evidence: vendor?._count?.evidence ?? 0,
+    evidenceRequests: vendor?._count?.evidenceRequests ?? 0,
+  };
+
+  // ---- Phase 328A additions (safe, non-breaking) ----
+
+  // Derive critical open count from already-fetched issues (no extra DB call)
+  const criticalOpenCount = openIssues.filter((it) => (it.severity || "").toUpperCase() === "CRITICAL").length;
+
+  // Accepted critical issues count (safe query with fallback)
+  let acceptedCriticalCount = 0;
+  try {
+    acceptedCriticalCount = await prisma.issue.count({
+      where: { vendorId, severity: "CRITICAL", status: "ACCEPTED_RISK" } as any,
+    });
+  } catch {
+    acceptedCriticalCount = 0;
+  }
+
+  // Outstanding evidence requests (safe if model/table doesn’t exist)
+  let openRequests: any[] = [];
+  try {
+    openRequests = await (prisma as any).evidenceRequest.findMany({
+      where: { vendorId, status: { in: ["REQUESTED", "PENDING"] } } as any,
+      orderBy: { createdAt: "desc" } as any,
+      take: 5,
+    });
+  } catch {
+    openRequests = [];
+  }
 
   return (
-    <main className="relative max-w-6xl mx-auto px-4 lg:px-6 py-12 lg:py-16">
-      <section className="mb-5 rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4 shadow-lg shadow-black/40">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-2xl lg:text-3xl font-semibold text-slate-50">
-              {vendor.name}
-            </h1>
-
-            <div className="flex flex-wrap gap-2">
-              {chip(vendor.category)}
-              {chip(vendor.tier ? `Tier: ${vendor.tier}` : null)}
-              {chip(
-                vendor.criticality ? `Criticality: ${vendor.criticality}` : null
-              )}
-              {!asVendor &&
-                chip(
-                  vendor.organization?.name
-                    ? `Org: ${vendor.organization.name}`
-                    : null
-                )}
-            </div>
-
-            {asVendor && (
-              <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-100">
-                You’re viewing the{" "}
-                <span className="font-semibold">Vendor Portal</span> safe version
-                of this profile (internal-only widgets hidden).
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {!asVendor ? (
-              <Link
-                href={`/vendors/${vendor.id}?as=vendor`}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-slate-100 hover:bg-white/10"
-              >
-                View as Vendor
-              </Link>
-            ) : (
-              <Link
-                href={`/vendors/${vendor.id}`}
-                className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-500/15"
-              >
-                Back to Internal View
-              </Link>
-            )}
-
-            {!asVendor && (
-              <>
-                <BoardPacketCTA variant="ghost" label="Board Packet" />
-
-                <Link
-                  href={`/vendors/${vendor.id}/findings`}
-                  className="inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/15"
-                >
-                  Findings ↗
-                </Link>
-
-                <Link
-                  href={`/vendors/${vendor.id}/evidence-requests/new`}
-                  className="inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1.5 text-[11px] font-semibold text-sky-200 hover:bg-sky-500/15"
-                >
-                  Request evidence ↗
-                </Link>
-
-                <Link
-                  href={`/assessment/new/${vendor.id}`}
-                  className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-slate-950 shadow-md hover:bg-emerald-400"
-                >
-                  Start assessment ↗
-                </Link>
-              </>
-            )}
-
-            {asVendor && (
-              <Link
-                href="/vendor-portal"
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-slate-950 shadow-md hover:bg-emerald-400"
-              >
-                Go to Vendor Portal ↗
-              </Link>
-            )}
-          </div>
+    <main className="container-page py-10">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link className="text-sm text-sky-300 hover:underline" href="/vendors">
+            ← Back
+          </Link>
+          <div className="text-sm text-white/40">/</div>
+          <div className="text-sm text-white/70">Vendor</div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm text-slate-200/80 max-w-3xl">
-            {summary ? (
-              summary
-            ) : (
-              <span className="text-slate-200/60">
-                No vendor summary yet. Add a short description to improve the
-                trust profile.
-              </span>
-            )}
-          </div>
+        <Link
+          className={clsx("rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/15")}
+          href={`/vendors/${vendorId}`}
+        >
+          Refresh
+        </Link>
+      </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${riskTone(
-                vendor.riskScore
-              )}`}
-              title="Vendor health / risk"
-            >
-              {riskLabel(vendor.riskScore)}
-            </span>
+      <VendorRiskPanel
+        vendorName={vendor.name}
+        score={score}
+        trend={trend}
+        breakdown={breakdown}
+        counts={counts}
+        topOpenIssues={topOpenIssues}
+      />
 
-            {!asVendor && (
-              <>
-                <span
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${issueTone(
-                    openIssues
-                  )}`}
-                  title="Open issues (excludes accepted risk)"
-                >
-                  Issues: {openIssues}
-                  {criticalOpen > 0 ? ` (Critical: ${criticalOpen})` : ""}
-                </span>
-
-                {acceptedRiskCount > 0 ? (
-                  <span
-                    className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200/80"
-                    title="Accepted risks (tracked, not blocking)"
-                  >
-                    Accepted risk: {acceptedRiskCount}
-                  </span>
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
+      {/* Phase 328A Actionability Layer */}
+      <section className="mt-6">
+        <VendorActionability328A
+          vendorId={vendorId}
+          vendor={vendor as any}
+          acceptedCriticalCount={acceptedCriticalCount}
+          openRequests={openRequests}
+          criticalOpenCount={criticalOpenCount}
+        />
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-5">
-        <div className="space-y-5">
-          <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
-            <VendorEvidenceTimeline vendorId={vendor.id} vendorName={vendor.name} />
-          </section>
+      {/* Vendor record (collapsible) */}
+      <details className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
+        <summary className="cursor-pointer select-none text-sm font-semibold text-white">
+          Vendor record <span className="ml-2 text-xs font-normal text-white/50">metadata</span>
+        </summary>
 
-          {!asVendor && (
-            <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Recent assessments
-                </p>
-                <Link
-                  href="/assessment"
-                  className="text-xs text-slate-200/60 hover:text-slate-100"
-                >
-                  View all ↗
-                </Link>
-              </div>
-
-              {vendor.assessments.length === 0 ? (
-                <p className="mt-3 text-sm text-slate-200/60">No assessments yet.</p>
-              ) : (
-                <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10">
-                  {vendor.assessments.slice(0, 6).map((a) => (
-                    <Link
-                      key={a.id}
-                      href={`/assessment/runs/${a.id}`}
-                      className="block px-4 py-3 hover:bg-white/5"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-medium text-slate-50">
-                          {a.title ?? `Assessment #${a.id}`}
-                        </div>
-                        <div className="text-xs text-slate-200/60">
-                          {new Date(a.createdAt as any).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="mt-1 text-xs text-slate-200/70">
-                        Status: {a.status ?? "—"}
-                        {a.template?.name ? ` • Template: ${a.template.name}` : ""}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+        <div className="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-xs text-white/50">Vendor ID</div>
+            <div className="mt-1 text-white tabular-nums">{vendor.id}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-xs text-white/50">Last updated</div>
+            <div className="mt-1 text-white tabular-nums">{new Date(vendor.updatedAt as any).toLocaleString()}</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="text-xs text-white/50">Organization</div>
+            <div className="mt-1 text-white">{(org as any).name ?? "Current org"}</div>
+          </div>
         </div>
-
-        <aside className="space-y-5">
-          <section className="rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 mb-2">
-              At a glance
-            </p>
-
-            <div className="space-y-2 text-[12px] text-slate-300">
-              <div className="flex justify-between">
-                <span>Risk score</span>
-                <span className="font-semibold">{vendor.riskScore ?? "Not scored"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Assessments</span>
-                <span>{assessmentCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Evidence</span>
-                <span>{evidenceCount}</span>
-              </div>
-
-              {!asVendor ? (
-                <div className="flex justify-between">
-                  <span>Open issues</span>
-                  <span className="text-amber-300 font-semibold">{openIssues}</span>
-                </div>
-              ) : (
-                <div className="flex justify-between">
-                  <span>Trust status</span>
-                  <span className="font-semibold text-emerald-200">Verified</span>
-                </div>
-              )}
-            </div>
-
-            {!asVendor && (
-              <div className="mt-4">
-                <BoardPacketCTA variant="ghost" label="View in Board Packet" />
-              </div>
-            )}
-
-            {asVendor && (
-              <div className="mt-4">
-                <Link
-                  href="/vendor-portal"
-                  className="inline-flex w-full items-center justify-center rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/15"
-                >
-                  Open Vendor Portal ↗
-                </Link>
-              </div>
-            )}
-          </section>
-
-          {/* ✅ Only show “Critical attention” when there are OPEN/IN_REVIEW critical issues */}
-          {!asVendor && criticalOpen > 0 && (
-            <section className="rounded-3xl border border-rose-500/25 bg-rose-500/10 px-4 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-200">
-                Critical attention
-              </p>
-              <p className="mt-2 text-sm text-rose-100/90">
-                {criticalOpen} critical issue{criticalOpen === 1 ? "" : "s"} open.
-                Prioritize remediation and evidence updates.
-              </p>
-              <div className="mt-3">
-                <Link
-                  href={`/vendors/${vendor.id}/findings`}
-                  className="inline-flex items-center rounded-full border border-rose-300/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-500/15"
-                >
-                  Review Findings ↗
-                </Link>
-              </div>
-            </section>
-          )}
-        </aside>
-      </div>
+      </details>
     </main>
   );
 }

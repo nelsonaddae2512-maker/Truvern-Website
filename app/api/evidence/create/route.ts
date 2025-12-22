@@ -1,109 +1,102 @@
-// app/api/evidence/create/route.ts
-import { NextRequest, NextResponse } from "next/server";
+﻿// app/api/evidence/create/route.ts
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { EvidenceKind } from "@prisma/client";
+import { auth } from "@clerk/nextjs/server";
 
-// Valid enum EvidenceKind values: POLICY | REPORT | SCREENSHOT | CERTIFICATE | OTHER
-const ALLOWED_KINDS = ["POLICY", "REPORT", "SCREENSHOT", "CERTIFICATE", "OTHER"] as const;
-const DEFAULT_EVIDENCE_KIND = "OTHER";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export async function POST(req: NextRequest) {
+function jsonError(status: number, error: string, debug?: any) {
+  return NextResponse.json({ ok: false, error, debug: debug ?? null }, { status });
+}
+
+function asString(v: any) {
+  return typeof v === "string" ? v : null;
+}
+function asNumber(v: any) {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+function resolveEvidenceKind(input: any): EvidenceKind {
+  const values = Object.values(EvidenceKind) as string[];
+  const s = asString(input);
+  if (s && values.includes(s)) return s as EvidenceKind;
+  return EvidenceKind.OTHER;
+}
+
+async function getDbOrgFromClerk() {
+  const { orgId } = auth();
+  if (!orgId) return null;
+
+  return prisma.organization.findUnique({
+    where: { clerkOrgId: orgId },
+  });
+}
+
+export async function POST(req: Request) {
   try {
-    let body: any;
+    // 🔐 Resolve org from Clerk
+    const org = await getDbOrgFromClerk();
+    if (!org) return jsonError(401, "No active organization");
 
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON body." },
-        { status: 400 }
-      );
-    }
+    const body = await req.json().catch(() => ({}));
 
-    const { vendorId, title, fileName, kind } = body ?? {};
+    const vendorId = asNumber(body?.vendorId);
+    if (!vendorId) return jsonError(400, "Missing or invalid vendorId");
 
-    if (vendorId == null || Number.isNaN(Number(vendorId))) {
-      return NextResponse.json(
-        { error: "vendorId is required." },
-        { status: 400 }
-      );
-    }
+    const title = asString(body?.title)?.trim();
+    if (!title) return jsonError(400, "Missing title");
 
-    const numericVendorId = Number(vendorId);
+    const fileUrl = asString(body?.fileUrl)?.trim();
+    if (!fileUrl) return jsonError(400, "Missing fileUrl");
 
-    // Load vendor and its organizationId (if present)
-    const vendor = await prisma.vendor.findUnique({
-      where: { id: numericVendorId },
-      select: {
-        id: true,
-        organizationId: true,
+    // 🔒 Verify vendor belongs to org
+    const vendor = await prisma.vendor.findFirst({
+      where: {
+        id: vendorId,
+        organizationId: org.id,
       },
+      select: { id: true },
     });
 
     if (!vendor) {
-      return NextResponse.json(
-        { error: "Vendor not found." },
-        { status: 404 }
-      );
+      return jsonError(403, "Vendor does not belong to organization");
     }
 
-    // Resolve organizationId to satisfy Evidence.organization required relation
-    let organizationId = vendor.organizationId ?? null;
+    const description = asString(body?.description);
+    const kind = resolveEvidenceKind(body?.kind);
 
-    if (!organizationId) {
-      const org = await prisma.organization.findFirst({
-        select: { id: true },
-      });
-
-      if (!org) {
-        return NextResponse.json(
-          {
-            error:
-              "No organization available to attach evidence to. Create an Organization first.",
-          },
-          { status: 500 }
-        );
-      }
-
-      organizationId = org.id;
-    }
-
-    const safeTitle =
-      (typeof title === "string" && title.trim()) ||
-      (typeof fileName === "string" && fileName.trim()) ||
-      "Evidence";
-
-    const mockFileUrl =
-      typeof fileName === "string" && fileName.trim()
-        ? `mock://local/${encodeURIComponent(fileName.trim())}`
-        : null;
-
-    // Normalize and validate kind coming from the client
-    const rawKind =
-      typeof kind === "string" ? kind.trim().toUpperCase() : "";
-    const effectiveKind = ALLOWED_KINDS.includes(rawKind as any)
-      ? rawKind
-      : DEFAULT_EVIDENCE_KIND;
-
-    const evidence = await prisma.evidence.create({
+    const created = await prisma.evidence.create({
       data: {
-        vendorId: numericVendorId,
-        organizationId,
-        title: safeTitle,
-        description: null,
-        fileUrl: mockFileUrl,
-        kind: effectiveKind,
-        // uploadedAt will use @default(now()) if set in schema
+        vendorId,
+        organizationId: org.id,
+        title,
+        description: description ?? null,
+        fileUrl,
+        uploadedAt: new Date(),
+        kind,
+      },
+      select: {
+        id: true,
+        vendorId: true,
+        organizationId: true,
+        title: true,
+        description: true,
+        fileUrl: true,
+        uploadedAt: true,
+        kind: true,
       },
     });
 
-    return NextResponse.json({ evidence }, { status: 201 });
-  } catch (err: any) {
-    console.error("Error creating evidence:", err);
-    return NextResponse.json(
-      {
-        error: err?.message ?? "Unexpected error while creating evidence.",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: true, evidence: created });
+  } catch (e: any) {
+    return jsonError(500, "Internal error", {
+      name: e?.name ?? "Error",
+      message: e?.message ?? String(e),
+      code: e?.code ?? null,
+    });
   }
 }

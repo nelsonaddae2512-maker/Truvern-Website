@@ -76,7 +76,7 @@ enum EvidenceKind {
   OTHER
 }
 
-// PHASE 321 — Evidence Requests (vendor-facing tasks)
+// PHASE 321 Ã¢â‚¬â€ Evidence Requests (vendor-facing tasks)
 enum EvidenceRequestStatus {
   OPEN
   SUBMITTED
@@ -85,7 +85,7 @@ enum EvidenceRequestStatus {
   CANCELLED
 }
 
-// PHASE 321 — Evidence request kinds (doc types)
+// PHASE 321 Ã¢â‚¬â€ Evidence request kinds (doc types)
 enum EvidenceRequestKind {
   SOC2
   ISO27001
@@ -96,7 +96,7 @@ enum EvidenceRequestKind {
   OTHER
 }
 
-// PHASE 317A — Question type enum for assessment builder (richer type system)
+// PHASE 317A Ã¢â‚¬â€ Question type enum for assessment builder (richer type system)
 enum AssessmentQuestionType {
   TEXT // Freeform text response
   YES_NO // Yes / No
@@ -115,6 +115,17 @@ enum QuestionType {
   NUMBER
   MULTIPLE_CHOICE
   FILE_UPLOAD
+}
+
+/**
+ * Ã¢Å“â€¦ NEW Ã¢â‚¬â€ vendor contact roles (multi-contact support)
+ */
+enum VendorContactRole {
+  PRIMARY
+  SECURITY
+  COMPLIANCE
+  LEGAL
+  OTHER
 }
 
 /**
@@ -144,14 +155,15 @@ model Organization {
   usageEvents         UsageEvent[]
   invites             InviteToken[]
 
-  // PHASE 318B — Assessment Runs
+  // PHASE 318B Ã¢â‚¬â€ Assessment Runs
   assessmentRuns AssessmentRun[] @relation("OrgAssessmentRuns")
 
-  // PHASE 321 — Evidence Requests
+  // PHASE 321 Ã¢â‚¬â€ Evidence Requests
   evidenceRequests EvidenceRequest[]
 
-  // PHASE 325A — Global Activity Feed
-  activityEvents ActivityEvent[]
+  // PHASE 325A Ã¢â‚¬â€ Global Activity Feed
+  activityEvents    ActivityEvent[]
+  vendorPortalUsers VendorPortalUser[]
 
   @@unique([name])
 }
@@ -189,7 +201,7 @@ model OrgMembership {
 
 /**
  * -------------------------------------------------------
- * PHASE 325A — GLOBAL ACTIVITY FEED
+ * PHASE 325A Ã¢â‚¬â€ GLOBAL ACTIVITY FEED
  * -------------------------------------------------------
  */
 
@@ -236,9 +248,17 @@ model Vendor {
   riskScore      Int?
   status         String?
   summary        String?            @db.Text
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  deletedAt      DateTime?
+
+  // Legacy single-contact fields (kept for backward compatibility)
+  contactName  String?
+  contactEmail String?
+
+  // Ã¢Å“â€¦ NEW Ã¢â‚¬â€ multi-contact support (up to 3 enforced in app logic)
+  contacts VendorContact[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   organization Organization       @relation(fields: [organizationId], references: [id])
   assessments  Assessment[]
@@ -248,13 +268,13 @@ model Vendor {
   usageEvents  UsageEvent[]
   shareTokens  VendorShareToken[]
 
-  // PHASE 318B — Assessment Runs
+  // PHASE 318B Ã¢â‚¬â€ Assessment Runs
   assessmentRuns AssessmentRun[] @relation("VendorAssessmentRuns")
 
-  // PHASE 321 — Evidence Requests
+  // PHASE 321 Ã¢â‚¬â€ Evidence Requests
   evidenceRequests EvidenceRequest[]
 
-  // PHASE 325A — Global Activity Feed
+  // PHASE 325A Ã¢â‚¬â€ Global Activity Feed
   activityEvents ActivityEvent[]
 
   // Trend summary flags
@@ -262,8 +282,30 @@ model Vendor {
   riskTrend90d  String?
   riskSnapshots VendorRiskSnapshot[]
   riskAlerts    VendorRiskAlert[]
+  portalUsers   VendorPortalUser[]
 
   @@unique([organizationId, name])
+}
+
+/**
+ * Ã¢Å“â€¦ NEW Ã¢â‚¬â€ VendorContact table (email + phone + primary)
+ */
+model VendorContact {
+  id        Int               @id @default(autoincrement())
+  vendorId  Int
+  name      String?
+  email     String
+  phone     String?
+  role      VendorContactRole @default(OTHER)
+  isPrimary Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, email]) // prevent duplicate emails per vendor
+  @@index([vendorId])
+  @@index([vendorId, isPrimary])
 }
 
 model VendorRiskAlert {
@@ -320,15 +362,15 @@ model TrustLink {
 
 /**
  * -------------------------------------------------------
- * PHASE 321/322 — EVIDENCE REQUESTS + ITERATIONS
+ * PHASE 321/322 Ã¢â‚¬â€ EVIDENCE REQUESTS + ITERATIONS
  * -------------------------------------------------------
  */
 
 model EvidenceRequest {
   id             Int                   @id @default(autoincrement())
   vendorId       Int
-  organizationId Int?
-  requestedBy    String?
+  organizationId Int
+  requestedBy    String
   kind           EvidenceRequestKind   @default(OTHER)
   label          String
   description    String?
@@ -341,7 +383,7 @@ model EvidenceRequest {
   // Legacy direct relation (kept)
   evidence Evidence[]
 
-  // PHASE 322 — submissions history
+  // PHASE 322 Ã¢â‚¬â€ submissions history
   iterations EvidenceRequestIteration[]
 
   // lifecycle timestamps (request-level)
@@ -352,8 +394,8 @@ model EvidenceRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  vendor       Vendor        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  vendor       Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([vendorId, status])
   @@index([organizationId])
@@ -474,7 +516,7 @@ model Assessment {
   template             AssessmentTemplate? @relation(fields: [templateId], references: [id])
   answers              AssessmentAnswer[]
 
-  // PHASE 318B — Assessment Runs
+  // PHASE 318B Ã¢â‚¬â€ Assessment Runs
   runs AssessmentRun[] @relation("AssessmentRuns")
 
   issues   Issue[]
@@ -573,7 +615,6 @@ model Issue {
   closedAt     DateTime?
   createdById  Int?
   assignedToId Int?
-
   organization Organization @relation(fields: [organizationId], references: [id])
   vendor       Vendor       @relation(fields: [vendorId], references: [id])
   assessment   Assessment?  @relation(fields: [assessmentId], references: [id])
@@ -615,6 +656,22 @@ model VendorRiskSnapshot {
   takenAt  DateTime @default(now())
 
   @@index([vendorId, takenAt])
+}
+
+model VendorPortalUser {
+  id             Int    @id @default(autoincrement())
+  organizationId Int
+  vendorId       Int
+  clerkUserId    String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  vendor       Vendor       @relation(fields: [vendorId], references: [id])
+
+  @@index([organizationId])
+  @@index([vendorId])
 }
 
 model Subscription {
@@ -669,7 +726,7 @@ model InviteToken {
 
 /**
  * -------------------------------------------------------
- * PHASE 318B — ASSESSMENT RUNS
+ * PHASE 318B Ã¢â‚¬â€ ASSESSMENT RUNS
  * -------------------------------------------------------
  */
 

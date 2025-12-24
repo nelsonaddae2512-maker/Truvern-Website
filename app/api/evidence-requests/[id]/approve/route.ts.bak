@@ -1,0 +1,228 @@
+// app/api/evidence-requests/[id]/approve/route.ts
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+import { EvidenceRequestStatus } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function jsonError(message: string, status = 400, extra?: any) {
+  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
+}
+
+function parseIntStrict(v: unknown, name: string): number {
+  const s =
+    typeof v === "string"
+      ? v.trim()
+      : Array.isArray(v)
+        ? String(v[0] ?? "")
+        : String(v ?? "");
+  const n = Number(s);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    throw new Error(`Invalid ${name}`);
+  }
+  return n;
+}
+
+function hasValidDevBypass(req: Request): boolean {
+  return req.headers.get("x-dev-seed-key") === "local-dev";
+}
+
+async function resolveOrgId(
+  req: Request
+): Promise<{ orgId: number; actorId: string }> {
+  const dev = hasValidDevBypass(req);
+
+  const a = auth();
+  const userId = a.userId || null;
+  const clerkOrgId = a.orgId || null;
+
+  if (userId && clerkOrgId) {
+    const org = await prisma.organization.findFirst({
+      where: { clerkOrgId },
+      select: { id: true },
+    });
+    if (!org) throw new Error("Signed-in org not found in DB");
+    return { orgId: org.id, actorId: userId };
+  }
+
+  if (dev) {
+    const raw = req.headers.get("x-org-id");
+    const orgId = parseIntStrict(raw, "x-org-id");
+    return { orgId, actorId: userId ?? "dev-bypass" };
+  }
+
+  throw new Error("Unauthorized (missing org context)");
+}
+
+function pickReviewNote(body: any): string {
+  const raw =
+    typeof body?.reviewNote === "string"
+      ? body.reviewNote
+      : typeof body?.reviewerNote === "string"
+        ? body.reviewerNote
+        : "";
+  return String(raw).trim();
+}
+
+export async function POST(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { orgId, actorId } = await resolveOrgId(req);
+    const { id } = await ctx.params;
+    const requestId = parseIntStrict(id, "id");
+
+    const body = await req.json().catch(() => ({} as any));
+    const reviewNote = pickReviewNote(body);
+
+    const existing = await prisma.evidenceRequest.findFirst({
+      where: { id: requestId, organizationId: orgId },
+      select: {
+        id: true,
+        status: true,
+        kind: true,
+        label: true,
+        vendorId: true,
+        reviewedAt: true,
+        reviewNote: true,
+        vendor: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!existing) return jsonError("Evidence request not found", 404);
+
+    if (existing.status === EvidenceRequestStatus.CANCELLED) {
+      return jsonError("Cannot approve a cancelled request.", 409);
+    }
+
+    // If already approved: return current state (idempotent)
+    if (existing.status === EvidenceRequestStatus.APPROVED) {
+      return NextResponse.json({
+        ok: true,
+        requestId,
+        status: EvidenceRequestStatus.APPROVED,
+        alreadyApproved: true,
+        reviewedAt: existing.reviewedAt ?? null,
+        reviewNote: existing.reviewNote ?? null,
+      });
+    }
+
+    const now = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Always reason about latest iteration
+      const latestIter = await tx.evidenceRequestIteration.findFirst({
+        where: { evidenceRequestId: requestId },
+        orderBy: { id: "desc" },
+        select: { id: true, status: true, reviewerNote: true },
+      });
+
+      if (!latestIter) {
+        return {
+          updated: null as any,
+          latestIterationId: null as number | null,
+          iter: null as any,
+          blockedReason: "NO_ITERATION",
+        };
+      }
+
+      // Only allow approve when latest iteration is SUBMITTED
+      if (latestIter.status !== EvidenceRequestStatus.SUBMITTED) {
+        return {
+          updated: null as any,
+          latestIterationId: latestIter.id,
+          iter: latestIter,
+          blockedReason: "NOT_SUBMITTED",
+        };
+      }
+
+      const iterUpdated = await tx.evidenceRequestIteration.update({
+        where: { id: latestIter.id },
+        data: {
+          status: EvidenceRequestStatus.APPROVED,
+          reviewedAt: now,
+          reviewerNote: reviewNote || null,
+        } as any,
+        select: { id: true, status: true, reviewedAt: true, reviewerNote: true },
+      });
+
+      // Mirror to parent for easier filtering/reporting
+      const updated = await tx.evidenceRequest.update({
+        where: { id: requestId },
+        data: {
+          status: EvidenceRequestStatus.APPROVED,
+          reviewedAt: now,
+          reviewNote: reviewNote || null,
+          updatedAt: now,
+        } as any,
+        select: {
+          id: true,
+          status: true,
+          reviewedAt: true,
+          reviewNote: true,
+          vendorId: true,
+        },
+      });
+
+      // Activity log (best-effort)
+      try {
+        await tx.activityEvent.create({
+          data: {
+            organizationId: orgId,
+            actorUserId: actorId && actorId !== "dev-bypass" ? actorId : null,
+            actorName: actorId,
+            actorEmail: null,
+            vendorId: existing.vendorId,
+            type: "EVIDENCE_REQUEST_APPROVED",
+            title: `Evidence request approved: ${existing.label}`,
+            description: reviewNote || `Approved request #${requestId}`,
+            metadata: {
+              evidenceRequestId: requestId,
+              vendorId: existing.vendorId,
+              vendorName: existing.vendor?.name ?? null,
+              requestKind: existing.kind,
+              label: existing.label,
+              status: EvidenceRequestStatus.APPROVED,
+              latestIterationId: latestIter.id,
+            },
+          } as any,
+        });
+      } catch {
+        // no-op
+      }
+
+      return { updated, latestIterationId: latestIter.id, iter: iterUpdated, blockedReason: null as any };
+    });
+
+    if (result.blockedReason === "NO_ITERATION") {
+      return jsonError("No iteration found for this request.", 409, {
+        requestId,
+        latestIterationId: null,
+      });
+    }
+
+    if (result.blockedReason === "NOT_SUBMITTED") {
+      return jsonError("Cannot approve unless the latest submission is SUBMITTED.", 409, {
+        requestId,
+        latestIterationId: result.latestIterationId,
+        latestStatus: result.iter?.status ?? null,
+      });
+    }
+
+    // Prefer iteration reviewerNote as truth, but keep existing response contract
+    return NextResponse.json({
+      ok: true,
+      requestId,
+      status: result.updated.status,
+      reviewedAt: result.updated.reviewedAt,
+      reviewNote: result.iter?.reviewerNote ?? result.updated.reviewNote ?? null,
+      latestIterationId: result.latestIterationId,
+    });
+  } catch (e: any) {
+    return jsonError(e?.message || "Approve failed", 400);
+  }
+}

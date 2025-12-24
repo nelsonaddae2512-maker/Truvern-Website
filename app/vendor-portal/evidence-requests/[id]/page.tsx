@@ -1,22 +1,16 @@
 // app/vendor-portal/evidence-requests/[id]/page.tsx
 import Link from "next/link";
 import prisma from "@/lib/prisma";
-import VendorEvidenceRequestSubmit from "@/components/vendor-evidence-request-submit";
-import EvidenceRequestStatusBadge from "@/components/evidence-request-status-badge";
+import VendorEvidenceRequestSubmitClient from "@/components/vendor-portal/vendor-evidence-request-submit.client";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type ParamsPromise = Promise<{ id: string }>;
 type Props = { params: ParamsPromise };
 
-function fmtDate(d?: Date | string | null) {
-  if (!d) return "—";
-  const dt = typeof d === "string" ? new Date(d) : d;
-  return dt.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
-
-function fmtTime(d?: Date | string | null) {
+function fmtDateTime(d?: Date | string | null) {
   if (!d) return "—";
   const dt = typeof d === "string" ? new Date(d) : d;
   return dt.toLocaleString(undefined, {
@@ -28,255 +22,137 @@ function fmtTime(d?: Date | string | null) {
   });
 }
 
-export default async function VendorEvidenceRequestDetailPage({ params }: Props) {
+export default async function VendorPortalEvidenceRequestDetailPage({ params }: Props) {
   const { id } = await params;
   const requestId = Number(id);
 
-  if (Number.isNaN(requestId)) {
+  if (!Number.isFinite(requestId)) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-          <div className="text-lg font-semibold text-slate-50">Invalid request</div>
-          <p className="mt-1 text-sm text-slate-200/70">That request id is not valid.</p>
-          <div className="mt-4">
-            <Link className="text-sm text-emerald-300 hover:underline" href="/vendor-portal">
-              Back to Vendor Space
-            </Link>
-          </div>
+      <main className="container-page py-10">
+        <h1 className="text-2xl font-semibold text-white">Invalid request id</h1>
+        <div className="mt-4">
+          <Link className="text-sky-300 hover:underline" href="/vendor-portal/evidence-requests">
+            Back to evidence requests
+          </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
   const reqRow = await prisma.evidenceRequest.findUnique({
     where: { id: requestId },
     include: {
-      vendor: { select: { id: true, name: true } },
-      iterations: {
-        orderBy: { submittedAt: "desc" },
-        include: {
-          files: {
-            // ✅ Evidence has uploadedAt, not createdAt
-            orderBy: [{ uploadedAt: "desc" }],
-            select: {
-              id: true,
-              title: true,
-              kind: true,
-              uploadedAt: true,
-              fileUrl: true, // ✅ Evidence uses fileUrl, not url
-            },
-          },
-        },
-      },
-      // (optional) legacy direct evidence list on request
-      evidence: {
-        orderBy: [{ uploadedAt: "desc" }],
-        select: {
-          id: true,
-          title: true,
-          kind: true,
-          uploadedAt: true,
-          fileUrl: true,
-        },
-      },
-    },
+      iterations: { orderBy: { id: "desc" } as any },
+      vendor: true as any,
+      evidence: true as any,
+    } as any,
   });
 
   if (!reqRow) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-          <div className="text-lg font-semibold text-slate-50">Not found</div>
-          <p className="mt-1 text-sm text-slate-200/70">That evidence request does not exist.</p>
-          <div className="mt-4">
-            <Link className="text-sm text-emerald-300 hover:underline" href="/vendor-portal">
-              Back to Vendor Space
-            </Link>
-          </div>
+      <main className="container-page py-10">
+        <h1 className="text-2xl font-semibold text-white">Evidence request not found</h1>
+        <div className="mt-4">
+          <Link className="text-sky-300 hover:underline" href="/vendor-portal/evidence-requests">
+            Back to evidence requests
+          </Link>
         </div>
-      </div>
+      </main>
     );
   }
 
-  const latestIter = reqRow.iterations?.[0] ?? null;
-  const canSubmit = ["OPEN", "REJECTED"].includes(String(reqRow.status));
+  const label = String((reqRow as any).label || "Evidence Request");
+  const description = (reqRow as any).description ? String((reqRow as any).description) : "";
+  const dueAt = (reqRow as any).dueAt ?? null;
 
-  const lastReviewerNote =
-    latestIter && String(latestIter.status) === "REJECTED" && latestIter.reviewerNote
-      ? latestIter.reviewerNote
-      : reqRow.reviewNote && String(reqRow.status) === "REJECTED"
-        ? reqRow.reviewNote
-        : null;
+  const vendorId = Number((reqRow as any).vendorId);
+  if (!Number.isFinite(vendorId)) {
+    return (
+      <main className="container-page py-10">
+        <h1 className="text-2xl font-semibold text-white">Missing vendor context</h1>
+        <p className="mt-2 text-white/70 text-sm">
+          This evidence request is not attached to a vendor (vendorId is missing).
+        </p>
+        <div className="mt-4">
+          <Link className="text-sky-300 hover:underline" href="/vendor-portal/evidence-requests">
+            Back to evidence requests
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // Iterations (latest first)
+  const iterations: any[] = Array.isArray((reqRow as any).iterations) ? (reqRow as any).iterations : [];
+  const latestIter = iterations[0] || null;
+
+  // Effective values: latest iteration wins, fallback to root request
+  const effectiveStatus =
+    (latestIter?.status ? String(latestIter.status) : "") || String((reqRow as any).status || "UNKNOWN");
+
+  const effectiveSubmittedAt = latestIter?.submittedAt ?? (reqRow as any).submittedAt ?? null;
+  const effectiveReviewedAt = latestIter?.reviewedAt ?? (reqRow as any).reviewedAt ?? null;
+
+  const effectiveReviewNote =
+    (typeof latestIter?.reviewNote === "string" ? latestIter.reviewNote : "") ||
+    (typeof (reqRow as any).reviewNote === "string" ? (reqRow as any).reviewNote : "");
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <main className="container-page py-10">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-xs uppercase tracking-[0.28em] text-slate-200/60">Evidence request</div>
-          {/* ✅ EvidenceRequest uses `label`, not `title` */}
-          <h1 className="mt-2 text-3xl font-semibold text-slate-50">{reqRow.label ?? "Evidence request"}</h1>
+          <h1 className="text-2xl font-semibold text-white">{label}</h1>
+          {description ? <p className="mt-2 text-sm text-white/70 max-w-2xl">{description}</p> : null}
 
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-200/70">
-            <EvidenceRequestStatusBadge status={String(reqRow.status) as any} />
-            <span>
-              Vendor: <span className="text-slate-100">{reqRow.vendor?.name ?? "—"}</span>
-            </span>
-            <span>
-              Due: <span className="text-slate-100">{fmtDate(reqRow.dueAt)}</span>
-            </span>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <div className="glass-soft rounded-xl px-4 py-3">
+              <div className="text-white/60">Status</div>
+              <div className="text-white font-medium">{effectiveStatus}</div>
+            </div>
+            <div className="glass-soft rounded-xl px-4 py-3">
+              <div className="text-white/60">Due</div>
+              <div className="text-white font-medium">{fmtDateTime(dueAt)}</div>
+            </div>
+            <div className="glass-soft rounded-xl px-4 py-3">
+              <div className="text-white/60">Submitted</div>
+              <div className="text-white font-medium">{fmtDateTime(effectiveSubmittedAt)}</div>
+            </div>
+            <div className="glass-soft rounded-xl px-4 py-3">
+              <div className="text-white/60">Reviewed</div>
+              <div className="text-white font-medium">{fmtDateTime(effectiveReviewedAt)}</div>
+            </div>
           </div>
 
-          {reqRow.description ? (
-            <div className="mt-3 text-sm text-slate-200/70 whitespace-pre-wrap">{reqRow.description}</div>
-          ) : null}
-
-          {lastReviewerNote ? (
-            <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4">
-              <div className="text-sm font-semibold text-rose-100">Reviewer note</div>
-              <p className="mt-1 text-sm text-rose-100/80 whitespace-pre-wrap">{lastReviewerNote}</p>
-              <p className="mt-2 text-xs text-rose-100/60">
-                Resubmit improved evidence below. Your previous submission remains in the audit trail.
-              </p>
+          {effectiveReviewNote ? (
+            <div className="mt-4 glass-soft rounded-xl px-4 py-3">
+              <div className="text-white/60 text-sm">Review note</div>
+              <div className="text-white mt-1">{effectiveReviewNote}</div>
             </div>
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 hover:bg-white/10"
-            href="/vendor-portal"
-          >
+        <div className="shrink-0">
+          <Link className="btn-glass" href="/vendor-portal/evidence-requests">
             Back
           </Link>
-          {reqRow.vendor?.id ? (
-            <Link
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 hover:bg-white/10"
-              href={`/vendors/${reqRow.vendor.id}`}
-            >
-              View vendor ↗
-            </Link>
-          ) : null}
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-slate-50">Submit evidence</div>
-                <p className="mt-1 text-sm text-slate-200/70">Attach one or more files and submit for review.</p>
-              </div>
-              {!canSubmit ? <span className="text-xs text-slate-200/60">Submissions closed</span> : null}
-            </div>
-
-            <div className="mt-4">
-              {/* ✅ Component expects requestId prop (per your file) */}
-              <VendorEvidenceRequestSubmit requestId={reqRow.id} canSubmit={canSubmit} />
-            </div>
+      <div className="mt-8">
+        {effectiveStatus === "APPROVED" ? (
+          <div className="glass-soft rounded-2xl p-5">
+            <div className="text-white font-semibold">Approved ✅</div>
+            <div className="text-white/70 text-sm mt-1">No further action is required.</div>
           </div>
-
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="text-sm font-semibold text-slate-50">Submission history</div>
-            <p className="mt-1 text-sm text-slate-200/70">Every submission is retained for auditability.</p>
-
-            {reqRow.iterations.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-200/70">No submissions yet.</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {reqRow.iterations.map((it, idx) => (
-                  <div key={it.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-semibold text-slate-50">
-                        Iteration #{reqRow.iterations.length - idx}
-                      </div>
-                      <div className="text-xs text-slate-200/60">Submitted {fmtTime(it.submittedAt)}</div>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-200/70">
-                      <EvidenceRequestStatusBadge status={String(it.status) as any} />
-                      {it.reviewedAt ? (
-                        <span className="text-xs text-slate-200/60">Reviewed {fmtTime(it.reviewedAt)}</span>
-                      ) : null}
-                    </div>
-
-                    {it.reviewerNote ? (
-                      <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
-                        <div className="text-xs font-semibold text-slate-100">Review note</div>
-                        <div className="mt-1 whitespace-pre-wrap text-sm text-slate-200/80">{it.reviewerNote}</div>
-                      </div>
-                    ) : null}
-
-                    <div className="mt-3 space-y-2">
-                      {it.files?.length ? (
-                        it.files.map((f) => (
-                          <div
-                            key={f.id}
-                            className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-                          >
-                            <div>
-                              <div className="text-sm font-semibold text-slate-50">{f.title}</div>
-                              <div className="text-xs text-slate-200/60">
-                                {(f.kind ?? "FILE").toString().toUpperCase()} • ID {f.id} • {fmtTime(f.uploadedAt)}
-                              </div>
-                            </div>
-                            {f.fileUrl ? (
-                              <a
-                                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-100 hover:bg-white/10"
-                                href={f.fileUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Open file ↗
-                              </a>
-                            ) : (
-                              <span className="text-xs text-slate-200/60">No URL</span>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-sm text-slate-200/70">No files on this iteration.</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="lg:col-span-1">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="text-sm font-semibold text-slate-50">Request metadata</div>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-200/60">Kind</dt>
-                <dd className="text-slate-50">{reqRow.kind ?? "—"}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-200/60">Created</dt>
-                <dd className="text-slate-50">{fmtTime(reqRow.createdAt)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-200/60">Submitted</dt>
-                <dd className="text-slate-50">{fmtTime(reqRow.submittedAt)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-slate-200/60">Reviewed</dt>
-                <dd className="text-slate-50">{fmtTime(reqRow.reviewedAt)}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="text-sm font-semibold text-slate-50">What happens next?</div>
-            <p className="mt-2 text-sm text-slate-200/70">
-              After you submit, your customer will review and either approve or request improvements.
-              Each submission stays in your audit trail.
-            </p>
-          </div>
-        </div>
+        ) : (
+          <VendorEvidenceRequestSubmitClient
+            vendorId={vendorId}
+            evidenceRequestId={requestId}
+            status={effectiveStatus}
+            defaultTitle={label}
+          />
+        )}
       </div>
-    </div>
+    </main>
   );
 }

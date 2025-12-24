@@ -1,8 +1,10 @@
+// app/vendors/[id]/page.tsx
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { requireDbOrganization } from "@/lib/org-db";
-import VendorRiskPanel from "@/components/vendors/vendor-risk-panel";
-import VendorActionability328A from "@/components/vendors/vendor-actionability-328a";
+import VendorRiskSnapshot from "@/components/vendors/vendor-risk-snapshot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,309 +14,261 @@ function clsx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
-function parseVendorId(raw: unknown): number {
+function safeStr(v: unknown) {
+  return typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim();
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function parseVendorId(raw: unknown): number | null {
   const v = Array.isArray(raw) ? raw[0] : raw;
   const s = typeof v === "string" ? v.trim() : v == null ? "" : String(v);
-  const m = s.match(/\d+/);
-  return m ? Number(m[0]) : NaN;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
 }
 
-function isOpenIssueStatus(status: string) {
-  const s = (status || "").toUpperCase();
-  return !["RESOLVED", "CLOSED", "DONE"].includes(s);
-}
-
-function severityPoints(sev: string) {
-  switch ((sev || "").toUpperCase()) {
-    case "CRITICAL":
-      return 10;
-    case "HIGH":
-      return 7;
-    case "MEDIUM":
-      return 4;
-    case "LOW":
-      return 1;
-    default:
-      return 2;
-  }
-}
-
-function sevKey(sev: string) {
-  const s = (sev || "").toUpperCase();
-  if (s === "CRITICAL") return "critical";
-  if (s === "HIGH") return "high";
-  if (s === "MEDIUM") return "medium";
-  if (s === "LOW") return "low";
-  return "medium";
-}
-
-function sevRank(sev: string) {
-  const s = (sev || "").toUpperCase();
-  if (s === "CRITICAL") return 4;
-  if (s === "HIGH") return 3;
-  if (s === "MEDIUM") return 2;
-  if (s === "LOW") return 1;
-  return 2;
-}
-
-type IssueLite = {
-  id: number;
-  title?: string | null;
-  status: string;
-  severity: string;
-  createdAt?: string | Date | null;
-};
-
-async function safeFindVendor(orgId: number, vendorId: number) {
-  // Try rich select first (counts + optional metadata)
-  try {
-    const v = await prisma.vendor.findFirst({
-      where: { id: vendorId, organizationId: orgId } as any,
-      select: {
-        id: true,
-        name: true,
-        updatedAt: true,
-        tier: true as any,
-        criticality: true as any,
-        category: true as any,
-        _count: {
-          select: {
-            assessments: true,
-            issues: true,
-            evidence: true,
-            evidenceRequests: true,
-          },
-        },
-      } as any,
-    });
-    return v as any;
-  } catch {
-    // Fallback: minimal fields only
-    const v = await prisma.vendor.findFirst({
-      where: { id: vendorId, organizationId: orgId } as any,
-      select: { id: true, name: true, updatedAt: true } as any,
-    });
-    return v as any;
-  }
-}
-
-async function safeFindIssues(vendorId: number): Promise<IssueLite[]> {
-  try {
-    const rows = await prisma.issue.findMany({
-      where: { vendorId } as any,
-      select: { id: true, title: true, status: true, severity: true, createdAt: true } as any,
-      take: 5000,
-    });
-    return rows as any;
-  } catch {
-    try {
-      const rows = await prisma.issue.findMany({
-        where: { vendorId } as any,
-        select: { id: true, status: true, severity: true } as any,
-        take: 5000,
-      });
-      return rows as any;
-    } catch {
-      return [];
-    }
-  }
-}
-
-export default async function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function VendorDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const org = await requireDbOrganization();
-
-  if ((org as any)?._needsOrgSelection) {
-    return (
-      <main className="container-page py-10">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-          <h1 className="text-2xl font-semibold text-white">Select an organization</h1>
-          <p className="mt-2 text-white/70">
-            You&apos;re signed in, but no organization is selected yet. Choose an organization to continue.
-          </p>
-          <div className="mt-4 flex gap-3 text-sm">
-            <Link className="rounded-lg bg-white/10 px-3 py-2 text-white hover:bg-white/15" href="/select-org">
-              Select organization
-            </Link>
-            <Link className="rounded-lg bg-white/10 px-3 py-2 text-white hover:bg-white/15" href="/vendors">
-              Back to vendors
-            </Link>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  const dbOrgId = (org as any).id as number;
   const { id } = await params;
+  const sp = (await searchParams) || {};
+  const saved = typeof sp.saved === "string" ? sp.saved : "";
+  const error = typeof sp.error === "string" ? sp.error : "";
+
   const vendorId = parseVendorId(id);
+  if (!vendorId) return notFound();
 
-  if (!Number.isFinite(vendorId)) {
-    return (
-      <main className="container-page py-10">
-        <h1 className="text-2xl font-semibold text-white">Invalid vendor id</h1>
-        <div className="mt-4">
-          <Link className="text-sky-300 hover:underline" href="/vendors">
-            Back to vendors
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const vendor = await prisma.vendor.findFirst({
+    where: { id: vendorId, organizationId: org.id },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      category: true,
+      summary: true,
+      contactName: true,
+      contactEmail: true,
+      updatedAt: true,
+      createdAt: true,
+    },
+  });
 
-  const vendor = await safeFindVendor(dbOrgId, vendorId);
+  if (!vendor) return notFound();
 
-  if (!vendor) {
-    return (
-      <main className="container-page py-10">
-        <h1 className="text-2xl font-semibold text-white">Vendor not found</h1>
-        <p className="mt-2 text-white/60">This vendor either doesn&apos;t exist or isn&apos;t in your organization.</p>
-        <div className="mt-4">
-          <Link className="text-sky-300 hover:underline" href="/vendors">
-            Back to vendors
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  async function updatePrimaryContact(formData: FormData) {
+    "use server";
 
-  const issues = await safeFindIssues(vendorId);
+    const org = await requireDbOrganization();
 
-  const breakdown = { critical: 0, high: 0, medium: 0, low: 0 };
-  let totalPts = 0;
-  let recentPts = 0;
+    const vendorId = Number(safeStr(formData.get("vendorId")));
+    if (!Number.isFinite(vendorId) || vendorId <= 0) redirect("/vendors");
 
-  const RECENT_DAYS = 14;
-  const recentCutoff = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000);
+    const contactName = safeStr(formData.get("contactName")) || null;
+    const emailRaw = safeStr(formData.get("contactEmail"));
+    const contactEmail = emailRaw ? emailRaw.toLowerCase() : null;
 
-  const openIssues = issues.filter((it) => isOpenIssueStatus(it.status));
+    if (contactEmail && !isValidEmail(contactEmail)) {
+      redirect(`/vendors/${vendorId}?error=invalid_email`);
+    }
 
-  for (const it of openIssues) {
-    const pts = severityPoints(it.severity);
-    totalPts += pts;
-
-    const key = sevKey(it.severity);
-    (breakdown as any)[key] = ((breakdown as any)[key] || 0) + 1;
-
-    try {
-      const d = it.createdAt ? new Date(it.createdAt as any) : null;
-      if (d && d >= recentCutoff) recentPts += pts;
-    } catch {}
-  }
-
-  const score = Math.max(0, Math.min(100, totalPts * 5));
-  const olderPts = Math.max(0, totalPts - recentPts);
-  const trend: "up" | "down" | "flat" =
-    totalPts === 0 ? "flat" : recentPts > olderPts ? "up" : recentPts < olderPts ? "down" : "flat";
-
-  const topOpenIssues = openIssues
-    .slice()
-    .sort((a, b) => {
-      const rs = sevRank(b.severity) - sevRank(a.severity);
-      if (rs !== 0) return rs;
-      return (b.id || 0) - (a.id || 0);
-    })
-    .slice(0, 6)
-    .map((it) => ({
-      id: it.id,
-      title: (it as any).title ?? `Issue #${it.id}`,
-      severity: it.severity,
-      status: it.status,
-    }));
-
-  const counts = {
-    assessments: vendor?._count?.assessments ?? 0,
-    openIssues: openIssues.length,
-    evidence: vendor?._count?.evidence ?? 0,
-    evidenceRequests: vendor?._count?.evidenceRequests ?? 0,
-  };
-
-  // ---- Phase 328A additions (safe, non-breaking) ----
-
-  // Derive critical open count from already-fetched issues (no extra DB call)
-  const criticalOpenCount = openIssues.filter((it) => (it.severity || "").toUpperCase() === "CRITICAL").length;
-
-  // Accepted critical issues count (safe query with fallback)
-  let acceptedCriticalCount = 0;
-  try {
-    acceptedCriticalCount = await prisma.issue.count({
-      where: { vendorId, severity: "CRITICAL", status: "ACCEPTED_RISK" } as any,
+    await prisma.vendor.updateMany({
+      where: { id: vendorId, organizationId: org.id },
+      data: { contactName, contactEmail } as any,
     });
-  } catch {
-    acceptedCriticalCount = 0;
+
+    revalidatePath(`/vendors/${vendorId}`);
+    revalidatePath("/vendors");
+    revalidatePath("/evidence");
+    redirect(`/vendors/${vendorId}?saved=contact`);
   }
 
-  // Outstanding evidence requests (safe if model/table doesn’t exist)
-  let openRequests: any[] = [];
-  try {
-    openRequests = await (prisma as any).evidenceRequest.findMany({
-      where: { vendorId, status: { in: ["REQUESTED", "PENDING"] } } as any,
-      orderBy: { createdAt: "desc" } as any,
-      take: 5,
+  async function updateBasics(formData: FormData) {
+    "use server";
+
+    const org = await requireDbOrganization();
+
+    const vendorId = Number(safeStr(formData.get("vendorId")));
+    if (!Number.isFinite(vendorId) || vendorId <= 0) redirect("/vendors");
+
+    const category = safeStr(formData.get("category")) || null;
+    const summary = safeStr(formData.get("summary")) || null;
+
+    await prisma.vendor.updateMany({
+      where: { id: vendorId, organizationId: org.id },
+      data: { category, summary } as any,
     });
-  } catch {
-    openRequests = [];
+
+    revalidatePath(`/vendors/${vendorId}`);
+    revalidatePath("/vendors");
+    redirect(`/vendors/${vendorId}?saved=basics`);
   }
+
+  const hasEmail = !!(vendor.contactEmail && vendor.contactEmail.trim());
 
   return (
     <main className="container-page py-10">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link className="text-sm text-sky-300 hover:underline" href="/vendors">
-            ← Back
-          </Link>
-          <div className="text-sm text-white/40">/</div>
-          <div className="text-sm text-white/70">Vendor</div>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold">{vendor.name}</h1>
+          <p className="text-muted-foreground mt-1">
+            Vendor details, risk snapshot, and primary contact used for reminders.
+          </p>
         </div>
-
-        <Link
-          className={clsx("rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/15")}
-          href={`/vendors/${vendorId}`}
-        >
-          Refresh
-        </Link>
+        <div className="flex gap-2">
+          <Link className="btn-glass" href="/vendors">
+            Back
+          </Link>
+          <Link className="btn-glass" href="/evidence">
+            Evidence Inbox
+          </Link>
+        </div>
       </div>
 
-      <VendorRiskPanel
-        vendorName={vendor.name}
-        score={score}
-        trend={trend}
-        breakdown={breakdown}
-        counts={counts}
-        topOpenIssues={topOpenIssues}
-      />
-
-      {/* Phase 328A Actionability Layer */}
-      <section className="mt-6">
-        <VendorActionability328A
-          vendorId={vendorId}
-          vendor={vendor as any}
-          acceptedCriticalCount={acceptedCriticalCount}
-          openRequests={openRequests}
-          criticalOpenCount={criticalOpenCount}
-        />
-      </section>
-
-      {/* Vendor record (collapsible) */}
-      <details className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
-        <summary className="cursor-pointer select-none text-sm font-semibold text-white">
-          Vendor record <span className="ml-2 text-xs font-normal text-white/50">metadata</span>
-        </summary>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-white/50">Vendor ID</div>
-            <div className="mt-1 text-white tabular-nums">{vendor.id}</div>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-white/50">Last updated</div>
-            <div className="mt-1 text-white tabular-nums">{new Date(vendor.updatedAt as any).toLocaleString()}</div>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="text-xs text-white/50">Organization</div>
-            <div className="mt-1 text-white">{(org as any).name ?? "Current org"}</div>
-          </div>
+      {error ? (
+        <div className="mt-4 glass-soft rounded-xl border border-white/10 p-4 text-sm">
+          <span className="text-amber-200">
+            {error === "invalid_email"
+              ? "Please enter a valid contact email."
+              : "Please check and try again."}
+          </span>
         </div>
-      </details>
+      ) : null}
+
+      {saved ? (
+        <div className="mt-4 glass-soft rounded-xl border border-white/10 p-4 text-sm">
+          <span className="text-emerald-200">
+            {saved === "contact"
+              ? "Primary contact saved."
+              : saved === "basics"
+              ? "Vendor basics saved."
+              : "Saved."}
+          </span>
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        {/* Left: Details */}
+        <div className="lg:col-span-2 grid gap-6">
+          {/* Basics */}
+          <section className="glass-soft rounded-2xl border border-white/10 p-6">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Basics</h2>
+              <span className="text-xs text-muted-foreground">
+                Updated {new Date(vendor.updatedAt).toLocaleDateString()}
+              </span>
+            </div>
+
+            <form action={updateBasics} className="mt-4 grid gap-4">
+              <input type="hidden" name="vendorId" value={vendor.id} />
+
+              <div>
+                <label className="block text-sm text-muted-foreground">Category</label>
+                <input
+                  name="category"
+                  defaultValue={vendor.category ?? ""}
+                  className="input-glass mt-2 w-full"
+                  placeholder="e.g., Cloud / Identity / Payments"
+                  autoComplete="off"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-muted-foreground">Summary</label>
+                <textarea
+                  name="summary"
+                  defaultValue={vendor.summary ?? ""}
+                  className="input-glass mt-2 w-full min-h-[120px]"
+                  placeholder="Short vendor summary (optional)"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button type="submit" className="btn-primary">
+                  Save Basics
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Primary Contact */}
+          <section className="glass-soft rounded-2xl border border-white/10 p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Primary Contact</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Evidence reminders will use this email.
+                </p>
+              </div>
+
+              <span
+                className={clsx(
+                  "text-xs rounded-full px-2 py-1 border",
+                  hasEmail
+                    ? "border-emerald-400/30 text-emerald-200"
+                    : "border-amber-400/30 text-amber-200"
+                )}
+              >
+                {hasEmail ? "Email set" : "Missing email"}
+              </span>
+            </div>
+
+            <form action={updatePrimaryContact} className="mt-4 grid gap-4 md:grid-cols-2">
+              <input type="hidden" name="vendorId" value={vendor.id} />
+
+              <div>
+                <label className="block text-sm text-muted-foreground">Contact Name</label>
+                <input
+                  name="contactName"
+                  defaultValue={vendor.contactName ?? ""}
+                  className="input-glass mt-2 w-full"
+                  placeholder="e.g., Security Team"
+                  autoComplete="name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-muted-foreground">Contact Email</label>
+                <input
+                  name="contactEmail"
+                  type="email"
+                  inputMode="email"
+                  defaultValue={vendor.contactEmail ?? ""}
+                  className="input-glass mt-2 w-full"
+                  placeholder="e.g., security@vendor.com"
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="md:col-span-2 flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">
+                  If email is missing, reminders are disabled in the Evidence Inbox.
+                </div>
+                <button type="submit" className="btn-primary">
+                  Save Contact
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        {/* Right: Risk Snapshot */}
+        <div className="grid gap-6">
+          <section className="glass-soft rounded-2xl border border-white/10 p-6">
+            <h2 className="text-lg font-semibold">Risk Snapshot</h2>
+            <div className="mt-4">
+              <VendorRiskSnapshot vendorId={vendor.id as any} />
+            </div>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

@@ -1,155 +1,114 @@
-// components/evidence-request-review-panel.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 
-type EvidenceItem = {
-  id: number;
-  title: string;
-  kind: string | null;
-  fileUrl: string | null;
-};
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
 
 type Props = {
   requestId: number;
   status: string;
-  evidence: EvidenceItem[];
-  initialNote?: string | null;
+  onUpdated?: () => void | Promise<void>;
+  className?: string;
 };
 
 export default function EvidenceRequestReviewPanel({
   requestId,
   status,
-  evidence,
-  initialNote = null,
+  onUpdated,
+  className,
 }: Props) {
-  const [busy, setBusy] = useState<"APPROVE" | "REJECT" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<string>(initialNote || "");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
-  const canReview = useMemo(() => status === "SUBMITTED", [status]);
+  const canReview = useMemo(() => {
+    const s = String(status || "").toUpperCase();
+    return s === "SUBMITTED";
+  }, [status]);
 
-  async function act(action: "APPROVE" | "REJECT") {
-    setError(null);
-    if (!canReview) return;
-
-    // Require note on reject (polish that feels “enterprise”)
-    if (action === "REJECT" && note.trim().length < 3) {
-      setError("Please add a short rejection note (at least 3 characters).");
-      return;
-    }
-
+  async function call(action: "approve" | "reject") {
+    setMsg(null);
     setBusy(action);
+
+    const reviewNote = String(note || "").trim();
+
     try {
-      const res = await fetch(`/api/evidence-requests/${requestId}/review`, {
+      const res = await fetch(`/api/evidence-requests/${requestId}/${action}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action, note: note.trim() }),
+        headers: {
+          "Content-Type": "application/json",
+          // header fallback (most reliable with curl + some edge cases)
+          ...(reviewNote ? { "x-review-note": reviewNote } : {}),
+        },
+        // keep body too (normal path)
+        body: JSON.stringify(reviewNote ? { reviewNote } : {}),
       });
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || `Request failed (${res.status})`);
+
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || `Request failed (${res.status})`);
       }
-      window.location.reload();
+
+      setMsg(
+        data?.noteUpdated
+          ? "Saved note."
+          : action === "approve"
+            ? "Approved."
+            : "Rejected."
+      );
+
+      setNote("");
+      await onUpdated?.();
     } catch (e: any) {
-      setError(e?.message || "Something went wrong.");
+      setMsg(e?.message || "Action failed");
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-sm">
+    <div className={clsx("glass-soft rounded-2xl p-4", className)}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-50">Submission</div>
-          <div className="text-xs text-slate-200/70">
-            Review the uploaded evidence and approve or reject.
+          <div className="text-sm font-semibold text-white">Review</div>
+          <div className="text-xs text-white/70">
+            {canReview ? "Approve or reject the latest submission." : "This request is not in a reviewable state."}
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            className={[
-              "rounded-full px-4 py-2 text-sm font-semibold",
-              canReview
-                ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                : "bg-white/10 text-slate-200/60 cursor-not-allowed",
-            ].join(" ")}
-            disabled={!canReview || busy !== null}
-            onClick={() => act("APPROVE")}
-          >
-            {busy === "APPROVE" ? "Approving…" : "Approve"}
-          </button>
-
-          <button
-            className={[
-              "rounded-full px-4 py-2 text-sm font-semibold",
-              canReview
-                ? "bg-rose-500/90 text-white hover:bg-rose-500"
-                : "bg-white/10 text-slate-200/60 cursor-not-allowed",
-            ].join(" ")}
-            disabled={!canReview || busy !== null}
-            onClick={() => act("REJECT")}
-          >
-            {busy === "REJECT" ? "Rejecting…" : "Reject"}
-          </button>
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
-        <div className="text-xs font-semibold text-slate-200/70">Review note</div>
-        <textarea
+      <div className="mt-3">
+        <label className="block text-xs text-white/70 mb-1">Reviewer note (optional)</label>
+        <input
+          className="input-glass w-full"
+          placeholder="Add a note for the vendor / audit trail…"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Optional on approve. Required on reject."
-          className="mt-2 h-24 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-50 outline-none placeholder:text-slate-200/40"
-          disabled={!canReview || busy !== null}
         />
-        <div className="mt-2 text-xs text-slate-200/60">
-          Files attached: <span className="font-semibold text-slate-100">{evidence.length}</span>
-        </div>
       </div>
 
-      {error ? (
-        <div className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </div>
-      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={clsx("btn-primary", !canReview && "opacity-60 pointer-events-none")}
+          onClick={() => call("approve")}
+          disabled={busy !== null || !canReview}
+        >
+          {busy === "approve" ? "Approving…" : "Approve"}
+        </button>
 
-      <div className="mt-4 space-y-2">
-        {evidence.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-4 text-sm text-slate-200/70">
-            No evidence attached to this submission yet.
-          </div>
-        ) : (
-          evidence.map((ev) => (
-            <div
-              key={ev.id}
-              className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3"
-            >
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-slate-50">
-                  {ev.title || `Evidence #${ev.id}`}
-                </div>
-                <div className="text-xs text-slate-200/70">
-                  {ev.kind ? ev.kind : "FILE"} • ID {ev.id}
-                </div>
-              </div>
+        <button
+          type="button"
+          className={clsx("btn-glass", !canReview && "opacity-60 pointer-events-none")}
+          onClick={() => call("reject")}
+          disabled={busy !== null || !canReview}
+        >
+          {busy === "reject" ? "Rejecting…" : "Reject"}
+        </button>
 
-              {ev.fileUrl ? (
-                <a
-                  href={ev.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shrink-0 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-50 hover:bg-white/15"
-                >
-                  Open file ↗
-                </a>
-              ) : null}
-            </div>
-          ))
-        )}
+        {msg ? <div className="ml-auto text-xs text-white/70">{msg}</div> : null}
       </div>
     </div>
   );

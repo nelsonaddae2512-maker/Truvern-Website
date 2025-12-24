@@ -19,6 +19,9 @@ function cleanItems(items: any): Required<Pick<Item, "title" | "fileUrl" | "kind
     .filter((x) => x.title && x.fileUrl);
 }
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -27,131 +30,63 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ ok: false, error: "Invalid request id" }, { status: 400 });
     }
 
-    const body = await req.json().catch(() => ({}));
-
-    // Accept BOTH shapes:
-    //  A) { evidenceIds: number[] }  (Phase 322 style)
-    //  B) { items: [{title,fileUrl,kind}] } (current vendor submit component)
-    const evidenceIdsFromBody: number[] = Array.isArray(body?.evidenceIds)
-      ? body.evidenceIds
-          .map((n: any) => Number(n))
-          .filter((n: number) => Number.isFinite(n))
-      : [];
-
+    const body = await req.json().catch(() => ({} as any));
     const items = cleanItems(body?.items);
 
-    const submittedBy = typeof body?.submittedBy === "string" ? body.submittedBy : null;
+    if (!items.length) {
+      return NextResponse.json({ ok: false, error: "At least one valid item is required" }, { status: 400 });
+    }
 
-    // ✅ Ensure request exists (+ vendor/org + archived guard)
-    const reqRow = await prisma.evidenceRequest.findUnique({
+    const now = new Date();
+
+    // Load current request + latest iteration (for continuity if needed)
+    const existing = await prisma.evidenceRequest.findUnique({
       where: { id: requestId },
-      select: {
-        id: true,
-        status: true,
-        vendorId: true,
-        organizationId: true,
-        vendor: { select: { id: true, deletedAt: true } },
-      },
-    });
+      include: { iterations: { orderBy: { id: "desc" } as any, take: 1 } as any },
+    } as any);
 
-    if (!reqRow) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-
-    // ✅ Archived vendor guardrail
-    if (reqRow.vendor?.deletedAt) {
-      return NextResponse.json(
-        { ok: false, error: "Vendor is archived. Restore to submit evidence." },
-        { status: 409 }
-      );
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Evidence request not found" }, { status: 404 });
     }
 
-    // Only allow submit/resubmit if OPEN or REJECTED
-    if (!["OPEN", "REJECTED"].includes(String(reqRow.status))) {
-      return NextResponse.json(
-        { ok: false, error: "Request is not open for submission" },
-        { status: 409 }
-      );
-    }
-
-    if (evidenceIdsFromBody.length === 0 && items.length === 0) {
-      return NextResponse.json(
-        { ok: false, error: "Provide either evidenceIds[] or items[]" },
-        { status: 400 }
-      );
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      // 1) Create a new iteration (the audit unit)
-      const iter = await tx.evidenceRequestIteration.create({
+    // Resubmission should clear old review info
+    const updated = await prisma.$transaction(async (tx) => {
+      // Create iteration
+      const iter = await (tx as any).evidenceRequestIteration.create({
         data: {
           evidenceRequestId: requestId,
-          status: "SUBMITTED" as any,
-          submittedBy: submittedBy ?? undefined,
-          submittedAt: new Date(),
+          status: "SUBMITTED",
+          submittedAt: now,
+          reviewedAt: null,
+          reviewNote: null,
+          items,
         },
-        select: { id: true },
       });
 
-      // 2) Determine evidenceIds
-      let evidenceIds: number[] = evidenceIdsFromBody;
-
-      // Create evidence from items if needed
-      if (evidenceIds.length === 0 && items.length > 0) {
-        // Evidence requires organizationId (non-null in your schema)
-        if (!reqRow.organizationId) {
-          throw new Error("Cannot create evidence: evidence request has no organizationId.");
-        }
-
-        const created = await Promise.all(
-          items.map((it) =>
-            tx.evidence.create({
-              data: {
-                vendorId: reqRow.vendorId,
-                organizationId: reqRow.organizationId!,
-                evidenceRequestId: requestId,
-                iterationId: iter.id,
-                title: it.title,
-                fileUrl: it.fileUrl,
-                kind: it.kind as any,
-                uploadedAt: new Date(),
-              },
-              select: { id: true },
-            })
-          )
-        );
-
-        evidenceIds = created.map((c) => c.id);
-      } else {
-        // 3) Attach existing evidence to this iteration + request
-        await tx.evidence.updateMany({
-          where: { id: { in: evidenceIds } },
-          data: {
-            iterationId: iter.id,
-            evidenceRequestId: requestId,
-          },
-        });
-      }
-
-      // 4) Update the request status
-      await tx.evidenceRequest.update({
+      // Update root request
+      const req2 = await tx.evidenceRequest.update({
         where: { id: requestId },
         data: {
-          status: "SUBMITTED" as any,
-          submittedAt: new Date(),
+          status: "SUBMITTED",
+          submittedAt: now,
+          reviewedAt: null,
+          reviewNote: null,
+          // If you store evidenceId, keep as-is here; submission doesn’t attach evidence directly in this endpoint.
         } as any,
       });
 
-      return { iterationId: iter.id, evidenceIds };
+      return { iter, req2 };
     });
 
     return NextResponse.json({
       ok: true,
-      iterationId: result.iterationId,
-      evidenceIds: result.evidenceIds,
+      requestId,
+      status: (updated.req2 as any).status,
+      submittedAt: (updated.req2 as any).submittedAt,
+      iterationId: (updated.iter as any).id,
+      itemsCount: items.length,
     });
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message ?? "Unknown error" },
-      { status: 500 }
-    );
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || "Submit failed" }, { status: 500 });
   }
 }

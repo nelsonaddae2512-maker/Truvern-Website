@@ -2,74 +2,108 @@
 
 import { useState } from "react";
 
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
+}
+
 type Props = {
-  evidenceRequestId: number;
-  canReview: boolean;
+  requestId: number;
+  status: string;
+  className?: string;
+  onUpdated?: () => void | Promise<void>;
 };
 
-export default function OrgEvidenceRequestReviewPanel({ evidenceRequestId, canReview }: Props) {
+export default function OrgEvidenceRequestReviewPanel({
+  requestId,
+  status,
+  className,
+  onUpdated,
+}: Props) {
   const [note, setNote] = useState("");
-  const [loading, setLoading] = useState<"APPROVE" | "REJECT" | null>(null);
+  const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function submit(action: "APPROVE" | "REJECT") {
+  const canReview = String(status || "").toUpperCase() === "SUBMITTED";
+
+  async function call(action: "approve" | "reject") {
     setMsg(null);
-    setLoading(action);
+    setBusy(action);
+
+    const reviewNote = String(note || "").trim();
+
     try {
-      const res = await fetch(`/api/org/evidence-requests/${evidenceRequestId}/review`, {
+      const res = await fetch(`/api/evidence-requests/${requestId}/${action}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, reviewerNote: note }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(reviewNote ? { "x-review-note": reviewNote } : {}),
+        },
+        body: JSON.stringify(reviewNote ? { reviewNote } : {}),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Request failed");
-      setMsg(action === "APPROVE" ? "Approved." : "Rejected.");
-      // refresh page to show new status/timeline
-      window.location.reload();
+
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || `Request failed (${res.status})`);
+      }
+
+      setMsg(
+        data?.noteUpdated
+          ? "Saved note."
+          : action === "approve"
+            ? "Approved."
+            : "Rejected."
+      );
+
+      setNote("");
+      await onUpdated?.();
     } catch (e: any) {
-      setMsg(e?.message ?? "Failed");
+      setMsg(e?.message || "Action failed");
     } finally {
-      setLoading(null);
+      setBusy(null);
     }
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
-      <div className="text-sm font-semibold text-slate-50">Decision</div>
-      <p className="mt-1 text-sm text-slate-200/70">
-        Leave a short note for the vendor. On reject, they can resubmit without losing history.
-      </p>
+    <div className={clsx("glass-soft rounded-2xl p-4", className)}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-white">Org review</div>
+          <div className="text-xs text-white/70">
+            {canReview ? "Approve or reject the latest vendor submission." : "Not currently reviewable."}
+          </div>
+        </div>
+      </div>
 
-      <div className="mt-4">
-        <label className="block text-xs font-semibold text-slate-200/70">Review note</label>
-        <textarea
-          className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-400/60 focus:border-emerald-500/40"
-          rows={4}
+      <div className="mt-3">
+        <label className="block text-xs text-white/70 mb-1">Reviewer note (optional)</label>
+        <input
+          className="input-glass w-full"
+          placeholder="Reason / guidance…"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="What’s missing / what to improve…"
-          disabled={!canReview || !!loading}
         />
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-3 flex gap-2 items-center">
         <button
-          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 hover:bg-white/10 disabled:opacity-50"
-          onClick={() => submit("APPROVE")}
-          disabled={!canReview || !!loading}
+          type="button"
+          className={clsx("btn-primary", !canReview && "opacity-60 pointer-events-none")}
+          onClick={() => call("approve")}
+          disabled={busy !== null || !canReview}
         >
-          {loading === "APPROVE" ? "Approving…" : "Approve"}
+          {busy === "approve" ? "Approving…" : "Approve"}
         </button>
 
         <button
-          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 hover:bg-white/10 disabled:opacity-50"
-          onClick={() => submit("REJECT")}
-          disabled={!canReview || !!loading}
+          type="button"
+          className={clsx("btn-glass", !canReview && "opacity-60 pointer-events-none")}
+          onClick={() => call("reject")}
+          disabled={busy !== null || !canReview}
         >
-          {loading === "REJECT" ? "Rejecting…" : "Reject"}
+          {busy === "reject" ? "Rejecting…" : "Reject"}
         </button>
 
-        {msg ? <span className="ml-2 text-xs text-slate-200/70">{msg}</span> : null}
+        {msg ? <div className="ml-auto text-xs text-white/70">{msg}</div> : null}
       </div>
     </div>
   );

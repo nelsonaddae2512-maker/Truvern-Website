@@ -1,164 +1,74 @@
-﻿import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+﻿// app/vendor/page.tsx
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireVendorPortalContext } from "@/lib/vendor-portal";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type WorkspaceVendor = {
-  id: number;
-  name: string;
-  riskScore: number | null;
-  assessments: { createdAt: Date }[];
-};
-
-function formatLatestAssessment(v: WorkspaceVendor): string {
-  const latest = v.assessments?.[0];
-  if (!latest) return "No assessments yet";
-
-  const d = new Date(latest.createdAt);
-  if (Number.isNaN(d.getTime())) return "No assessments yet";
-
-  return d.toLocaleDateString();
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(" ");
 }
 
-export default async function VendorWorkspacePage() {
-  const vendors = (await prisma.vendor.findMany({
-    orderBy: { riskScore: "desc" },
-    take: 10,
-    include: {
-      assessments: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
-  })) as WorkspaceVendor[];
+export default async function VendorPortalHomePage() {
+  const res = await requireVendorPortalContext();
+  if (!res.ok) redirect(res.redirectTo || "/vendor/not-linked");
+
+  const { ctx } = res;
+  const vendorName = (ctx.directVendor as any)?.name ?? "Vendor";
+  const orgName = (ctx.portalOrg as any)?.name ?? "Organization";
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50">
-      <section className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-        <header className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.25em] text-sky-400">
-            Truvern Â· Vendor workspace
+    <main className="container-page py-10">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Vendor Portal</h1>
+          <p className="mt-1 text-sm text-white/70">
+            Signed in as <span className="text-white/90">{vendorName}</span> · {orgName}
           </p>
-          <h1 className="text-3xl md:text-4xl font-semibold">
-            One workspace for vendor assessments and evidence.
-          </h1>
-          <p className="text-sm md:text-base text-slate-300 max-w-3xl">
-            This workspace is where vendors come to answer questionnaires, upload
-            evidence, and see exactly how they are being scored. When shared via
-            a secure link or SSO, the view is scoped to a single vendor.
-          </p>
-        </header>
+          {!ctx.vendorMatchesOrg && ctx.selectedClerkOrgId ? (
+            <p className="mt-2 text-xs text-amber-200/80">
+              Heads up: your selected org doesn’t match the vendor portal org. Portal access still works (this is just informational).
+            </p>
+          ) : null}
+        </div>
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-              Step 1 Â· Profile
-            </p>
-            <p className="text-sm text-slate-100">
-              Vendors keep a single source-of-truth profile instead of filling
-              out the same basics for every customer.
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-              Step 2 Â· Questionnaire
-            </p>
-            <p className="text-sm text-slate-100">
-              Complete standardized questionnaires once and re-use the answers
-              across multiple customers on the trust network.
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-4 space-y-2">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-              Step 3 Â· Evidence
-            </p>
-            <p className="text-sm text-slate-100">
-              Upload SOC reports, pen tests, and policies, then track expiry and
-              remediation directly from the workspace.
-            </p>
-          </div>
-        </section>
+        <div className="flex gap-2">
+          <Link className={clsx("btn-glass")} href="/vendor/evidence-requests">
+            Evidence Requests
+          </Link>
+          <Link className={clsx("btn-glass")} href="/vendors">
+            Back to Org App
+          </Link>
+        </div>
+      </div>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">
-              Sample vendor workspace entries
-            </h2>
-            <Link
-              href="/vendors"
-              className="text-xs text-sky-300 hover:underline"
-            >
-              View full vendor list
-            </Link>
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <Link
+          href="/vendor/evidence-requests"
+          className={clsx("glass-soft rounded-2xl border border-white/10 p-5 hover:border-white/20 transition")}
+        >
+          <div className="text-base font-medium">Evidence Requests</div>
+          <div className="mt-1 text-sm text-white/70">
+            View requests, upload evidence, and track review status.
           </div>
+        </Link>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/40">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-900/80 border-b border-slate-800">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium text-slate-300">
-                    Vendor
-                  </th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-300">
-                    Risk score
-                  </th>
-                  <th className="px-4 py-2 text-left font-medium text-slate-300">
-                    Latest assessment
-                  </th>
-                  <th className="px-4 py-2 text-right font-medium text-slate-300">
-                    Workspace
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendors.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-6 text-center text-sm text-slate-400"
-                    >
-                      No vendors found yet. Once vendors are onboarded into
-                      Truvern, their workspace links will appear here.
-                    </td>
-                  </tr>
-                )}
-                {vendors.map((v) => (
-                  <tr
-                    key={v.id}
-                    className="border-t border-slate-800 hover:bg-slate-900/60 transition"
-                  >
-                    <td className="px-4 py-2">
-                      <span className="text-slate-50">{v.name}</span>
-                    </td>
-                    <td className="px-4 py-2 text-slate-100">
-                      {v.riskScore ?? "â€”"}
-                    </td>
-                    <td className="px-4 py-2 text-slate-400">
-                      {formatLatestAssessment(v)}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <Link
-                        href={`/vendors/${v.id}`}
-                        className="inline-flex items-center rounded-md border border-sky-500/60 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/10 transition"
-                      >
-                        Open workspace
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <Link
+          href="/vendor/debug"
+          className={clsx("glass-soft rounded-2xl border border-white/10 p-5 hover:border-white/20 transition")}
+        >
+          <div className="text-base font-medium">Debug</div>
+          <div className="mt-1 text-sm text-white/70">
+            See how your vendor portal context is being resolved.
           </div>
-        </section>
+        </Link>
+      </div>
 
-        <section className="pt-2 border-top border-slate-800 text-xs text-slate-500 space-y-1">
-          <p>
-            For real vendors, this page is only accessible via a secure link
-            or SSO connection. This environment currently shows a sample view
-            based on your internal vendor catalogue.
-          </p>
-        </section>
-      </section>
+      <p className="mt-10 text-xs text-white/50">
+        This portal is for vendor evidence submissions and status tracking.
+      </p>
     </main>
   );
 }

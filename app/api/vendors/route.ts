@@ -1,113 +1,133 @@
-// app/vendors/page.tsx
-import Link from "next/link";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireDbOrganization } from "@/lib/org-db";
+import { auth } from "@clerk/nextjs/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
-function riskTone(score: number | null | undefined): string {
-  if (score == null) return "bg-slate-800 text-slate-200 border-slate-700";
-  if (score >= 85) return "bg-emerald-500/10 text-emerald-300 border-emerald-500/60";
-  if (score >= 70) return "bg-sky-500/10 text-sky-200 border-sky-500/50";
-  if (score >= 50) return "bg-amber-500/10 text-amber-200 border-amber-500/50";
-  return "bg-rose-500/10 text-rose-200 border-rose-500/50";
+function isDevBypass(req: Request) {
+  const devKey = req.headers.get("x-dev-seed-key");
+  return process.env.NODE_ENV !== "production" && devKey === "local-dev";
 }
 
-export default async function VendorsPage() {
+function toSlug(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function getOrgIdForRequest(req: Request): Promise<number> {
+  // DEV BYPASS: allow PowerShell calls without Clerk cookies
+  if (isDevBypass(req)) {
+    const hdr = req.headers.get("x-org-id");
+    const fromHdr = hdr ? Number(String(hdr).trim()) : NaN;
+    if (Number.isFinite(fromHdr) && fromHdr > 0) return fromHdr;
+
+    // fallback: most recent org in DB
+    const org = await prisma.organization.findFirst({
+      orderBy: { id: "desc" } as any,
+      select: { id: true } as any,
+    } as any);
+
+    if (!org?.id) throw new Error("No organizations found in DB for dev bypass.");
+    return org.id;
+  }
+
+  // NORMAL: enforce Clerk + org context
+  const { userId } = await auth();
+  if (!userId) throw new Error("unauthorized");
   const org = await requireDbOrganization();
-  const organizationId = org.id;
+  return org.id;
+}
 
-  const vendors = await prisma.vendor.findMany({
-    where: { organizationId, deletedAt: null },
-    orderBy: [{ createdAt: "desc" }],
-    select: {
-      id: true,
-      name: true,
-      riskScore: true,
-      createdAt: true,
-      summary: true,
-      slug: true,
-      category: true,
-      tier: true,
-      criticality: true,
-      status: true,
-      updatedAt: true,
-      _count: {
-        select: { assessments: true, evidence: true },
-      },
-    },
-  });
+async function ensureUniqueVendorSlug(organizationId: number, name: string) {
+  const base = toSlug(name) || "vendor";
+  let slug = base;
+  let i = 1;
 
-  return (
-    <main className="container-page py-10">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-50">Vendors</h1>
-          <p className="mt-1 text-sm text-slate-200/70">
-            Your third-party inventory, risk, evidence, and assessments.
-          </p>
-        </div>
+  while (
+    await prisma.vendor.findFirst({
+      where: { organizationId, slug } as any,
+      select: { id: true } as any,
+    } as any)
+  ) {
+    i += 1;
+    slug = `${base}-${i}`;
+  }
 
-        <Link
-          href="/vendors/new"
-          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-50 hover:bg-white/10"
-        >
-          New vendor
-        </Link>
-      </div>
+  return slug;
+}
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/40">
-        <div className="grid grid-cols-12 gap-3 border-b border-white/10 px-5 py-3 text-xs font-semibold text-slate-200/70">
-          <div className="col-span-5">Vendor</div>
-          <div className="col-span-2">Risk</div>
-          <div className="col-span-2">Assessments</div>
-          <div className="col-span-2">Evidence</div>
-          <div className="col-span-1 text-right">Status</div>
-        </div>
+export async function GET(req: Request) {
+  try {
+    const organizationId = await getOrgIdForRequest(req);
 
-        {vendors.length === 0 ? (
-          <div className="px-5 py-10 text-sm text-slate-200/70">No vendors yet.</div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {vendors.map((v) => (
-              <Link
-                key={v.id}
-                href={`/vendors/${v.id}`}
-                className="grid grid-cols-12 gap-3 px-5 py-4 hover:bg-white/5"
-              >
-                <div className="col-span-5">
-                  <div className="text-sm font-semibold text-slate-50">{v.name}</div>
-                  <div className="mt-1 text-xs text-slate-200/60">
-                    {v.category ?? "—"} • {v.tier ?? "—"} • {v.criticality ?? "—"}
-                  </div>
+    const vendors = await prisma.vendor.findMany({
+      where: { organizationId } as any,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      take: 500,
+      select: {
+        id: true,
+        name: true,
+        slug: true as any,
+        summary: true as any,
+        category: true as any,
+        tier: true as any,
+        criticality: true as any,
+        updatedAt: true,
+        createdAt: true,
+        organizationId: true,
+      } as any,
+    } as any);
 
-                  {v.summary ? (
-                    <div className="mt-2 line-clamp-2 text-xs text-slate-200/70">{v.summary}</div>
-                  ) : null}
-                </div>
+    return NextResponse.json({
+  ok: true,
+  id: vendor.id,
+  vendorId: vendor.id,
+  vendor,
+});
 
-                <div className="col-span-2">
-                  <span
-                    className={[
-                      "inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold",
-                      riskTone(v.riskScore),
-                    ].join(" ")}
-                  >
-                    {v.riskScore ?? "—"}
-                  </span>
-                </div>
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    const status = msg === "unauthorized" ? 401 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
+  }
+}
 
-                <div className="col-span-2 text-sm text-slate-100">{v._count.assessments}</div>
-                <div className="col-span-2 text-sm text-slate-100">{v._count.evidence}</div>
+export async function POST(req: Request) {
+  try {
+    const organizationId = await getOrgIdForRequest(req);
+    const body = await req.json().catch(() => ({}));
 
-                <div className="col-span-1 text-right text-xs text-slate-200/70">{v.status ?? "—"}</div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </main>
-  );
+    const name = String(body?.name || "").trim();
+    if (!name) {
+      return NextResponse.json(
+        { ok: false, error: "Vendor name is required" },
+        { status: 400 }
+      );
+    }
+
+    const slug = await ensureUniqueVendorSlug(organizationId, name);
+
+    const vendor = await prisma.vendor.create({
+      data: {
+        organizationId,
+        name,
+        slug,
+        summary: body?.summary ?? null,
+        category: body?.category ?? null,
+        tier: body?.tier ?? null,
+        criticality: body?.criticality ?? null,
+      } as any,
+    } as any);
+
+    return NextResponse.json({ ok: true, vendor });
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    const status = msg === "unauthorized" ? 401 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
+  }
 }

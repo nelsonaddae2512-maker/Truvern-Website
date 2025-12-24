@@ -30,7 +30,7 @@ body {
   max-width: 72rem; /* ~ max-w-6xl */
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1rem;  /* px-4 */
+  padding-left: 1rem; /* px-4 */
   padding-right: 1rem; /* px-4 */
 }
 
@@ -173,3 +173,35 @@ body {
 
 /* NOTE: do NOT set :root { color-scheme: dark; }
    It can cause unexpected styling differences in some browsers/extensions. */
+
+/* =========================
+   Native Select / Option Dark Fix
+   Fixes white dropdown panels in dark UI
+   ========================= */
+
+select {
+  color-scheme: dark; /* hint only for form controls */
+}
+
+select option,
+select optgroup {
+  background-color: rgba(2, 6, 23, 0.98); /* slate-950 */
+  color: rgba(226, 232, 240, 0.95); /* slate-200 */
+}
+
+select option:hover,
+select option:focus {
+  background-color: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+select option:checked {
+  background-color: rgba(14, 165, 233, 0.35); /* sky-500 */
+  color: rgba(255, 255, 255, 0.98);
+}
+
+/* Optional: datalist (if ever used) */
+datalist option {
+  background-color: rgba(2, 6, 23, 0.98);
+  color: rgba(226, 232, 240, 0.95);
+}

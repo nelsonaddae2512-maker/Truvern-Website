@@ -1,0 +1,248 @@
+// app/api/evidence-requests/[id]/reject/route.ts
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+import { EvidenceRequestStatus } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function jsonError(message: string, status = 400, extra?: any) {
+  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
+}
+
+function parseIntStrict(v: unknown, name: string): number {
+  const s =
+    typeof v === "string"
+      ? v.trim()
+      : Array.isArray(v)
+        ? String(v[0] ?? "")
+        : String(v ?? "");
+  const n = Number(s);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    throw new Error(`Invalid ${name}`);
+  }
+  return n;
+}
+
+function hasValidDevBypass(req: Request): boolean {
+  return req.headers.get("x-dev-seed-key") === "local-dev";
+}
+
+async function resolveOrgId(
+  req: Request
+): Promise<{ orgId: number; actorId: string }> {
+  const dev = hasValidDevBypass(req);
+
+  const a = auth();
+  const userId = a.userId || null;
+  const clerkOrgId = a.orgId || null;
+
+  if (userId && clerkOrgId) {
+    const org = await prisma.organization.findFirst({
+      where: { clerkOrgId },
+      select: { id: true },
+    });
+    if (!org) throw new Error("Signed-in org not found in DB");
+    return { orgId: org.id, actorId: userId };
+  }
+
+  if (dev) {
+    const raw = req.headers.get("x-org-id");
+    const orgId = parseIntStrict(raw, "x-org-id");
+    return { orgId, actorId: userId ?? "dev-bypass" };
+  }
+
+  throw new Error("Unauthorized (missing org context)");
+}
+
+export async function POST(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { orgId, actorId } = await resolveOrgId(req);
+    const { id } = await ctx.params;
+    const requestId = parseIntStrict(id, "id");
+
+    const body = await req.json().catch(() => ({} as any));
+    const reviewNote =
+      typeof body?.reviewNote === "string" ? body.reviewNote.trim() : "";
+
+    const existing = await prisma.evidenceRequest.findFirst({
+      where: { id: requestId, organizationId: orgId },
+      select: {
+        id: true,
+        status: true,
+        kind: true,
+        label: true,
+        vendorId: true,
+        vendor: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!existing) return jsonError("Evidence request not found", 404);
+
+    // Strict lifecycle at request level
+    if (existing.status === EvidenceRequestStatus.CANCELLED) {
+      return jsonError("Cannot reject a cancelled request.", 409);
+    }
+    if (existing.status === EvidenceRequestStatus.APPROVED) {
+      return jsonError("Cannot reject an approved request.", 409);
+    }
+
+    const now = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Always reason about the latest iteration
+      const latestIter = await tx.evidenceRequestIteration.findFirst({
+        where: { evidenceRequestId: requestId },
+        orderBy: { id: "desc" },
+        select: { id: true, status: true, reviewedAt: true, reviewerNote: true },
+      });
+
+      const latestIterationId = latestIter?.id ?? null;
+
+      if (!latestIter) {
+        return {
+          updated: null as any,
+          latestIterationId,
+          alreadyRejected: false,
+          iter: null as any,
+        };
+      }
+
+      // Idempotent: already rejected at iteration level
+      if (latestIter.status === EvidenceRequestStatus.REJECTED) {
+        const current = await tx.evidenceRequest.findUnique({
+          where: { id: requestId },
+          select: { id: true, status: true, reviewedAt: true, reviewNote: true },
+        });
+
+        return {
+          updated: current,
+          latestIterationId,
+          alreadyRejected: true,
+          iter: latestIter,
+        };
+      }
+
+      // Only allow review actions when the latest iteration is SUBMITTED
+      // (prevents rejecting drafts/approved/etc.)
+      if (latestIter.status !== EvidenceRequestStatus.SUBMITTED) {
+        return {
+          updated: null as any,
+          latestIterationId,
+          alreadyRejected: false,
+          iter: latestIter,
+        };
+      }
+
+      // Update latest iteration
+      const iterUpdated = await tx.evidenceRequestIteration.update({
+        where: { id: latestIter.id },
+        data: {
+          status: EvidenceRequestStatus.REJECTED,
+          reviewedAt: now,
+          reviewerNote: reviewNote || null,
+        } as any,
+        select: { id: true, status: true, reviewedAt: true, reviewerNote: true },
+      });
+
+      // Mirror to parent for filtering/reporting
+      const updated = await tx.evidenceRequest.update({
+        where: { id: requestId },
+        data: {
+          status: EvidenceRequestStatus.REJECTED,
+          reviewedAt: now,
+          reviewNote: reviewNote || null,
+          updatedAt: now,
+        } as any,
+        select: {
+          id: true,
+          status: true,
+          reviewedAt: true,
+          reviewNote: true,
+          vendorId: true,
+        },
+      });
+
+      // Audit log (best-effort, but inside tx for consistency)
+      try {
+        await tx.activityEvent.create({
+          data: {
+            organizationId: orgId,
+            actorUserId: actorId && actorId !== "dev-bypass" ? actorId : null,
+            actorName: actorId,
+            actorEmail: null,
+            vendorId: existing.vendorId,
+            type: "EVIDENCE_REQUEST_REJECTED",
+            title: `Evidence request rejected: ${existing.label}`,
+            description: reviewNote || `Rejected request #${requestId}`,
+            metadata: {
+              evidenceRequestId: requestId,
+              vendorId: existing.vendorId,
+              vendorName: existing.vendor?.name ?? null,
+              requestKind: existing.kind,
+              label: existing.label,
+              status: EvidenceRequestStatus.REJECTED,
+              latestIterationId,
+            },
+          } as any,
+        });
+      } catch {
+        // no-op
+      }
+
+      return {
+        updated,
+        latestIterationId,
+        alreadyRejected: false,
+        iter: iterUpdated,
+      };
+    });
+
+    // If no iteration existed
+    if (!result.iter) {
+      return jsonError("No iteration found for this request.", 409, {
+        requestId,
+        latestIterationId: result.latestIterationId,
+      });
+    }
+
+    // If latest iteration wasn't SUBMITTED, reject should not proceed
+    if (!result.alreadyRejected && result.updated == null) {
+      return jsonError("Cannot reject unless the latest submission is SUBMITTED.", 409, {
+        requestId,
+        latestIterationId: result.latestIterationId,
+        latestStatus: result.iter.status,
+      });
+    }
+
+    // Idempotent response (already rejected)
+    if (result.alreadyRejected) {
+      return NextResponse.json({
+        ok: true,
+        requestId,
+        status: EvidenceRequestStatus.REJECTED,
+        alreadyRejected: true,
+        reviewedAt: result.iter.reviewedAt ?? result.updated?.reviewedAt ?? null,
+        // Prefer iteration reviewerNote as the source of truth
+        reviewNote: result.iter.reviewerNote ?? result.updated?.reviewNote ?? null,
+        latestIterationId: result.latestIterationId,
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      requestId,
+      status: result.updated.status,
+      reviewedAt: result.updated.reviewedAt,
+      reviewNote: result.updated.reviewNote,
+      latestIterationId: result.latestIterationId,
+    });
+  } catch (e: any) {
+    return jsonError(e?.message || "Reject failed", 400);
+  }
+}
